@@ -1,0 +1,8 @@
+{
+  "appId": "com.hellonepal.app",
+  "appName": "Hello Nepal",
+  "webDir": "dist",
+  "server": {
+    "androidScheme": "https"
+  }
+}
