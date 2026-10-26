@@ -1,1 +1,9 @@
-VITE_MAPBOX_ACCESS_TOKEN="pk.eyJ1IjoicmtkYWlmaWxtcyIsImEiOiJjbXZveDdtOHUweGIyMnpxeGtxemJjODV5In0.2BCQn8iiApvGhcXV-ez8Vg"
+
+node_modules
+dist
+dist-ssr
+*.local
+.env
+.env.*
+.DS_Store
+android/app/build
