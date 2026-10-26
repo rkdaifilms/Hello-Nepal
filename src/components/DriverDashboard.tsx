@@ -1,6 +1,26 @@
 import React, { useState } from 'react';
-import { CONFIG } from '../config/env';
-import { Wallet, ShieldAlert, ArrowUpRight, CheckCircle2, AlertCircle, Lock, Smartphone, Banknote } from 'lucide-react';
+import { 
+  Wallet, 
+  ShieldAlert, 
+  ArrowUpRight, 
+  CheckCircle2, 
+  AlertCircle, 
+  Lock, 
+  Smartphone, 
+  Banknote 
+} from 'lucide-react';
+
+// यदि config/env मौजूद न हो या उसमें की (key) मिसिंग हो, तो यह क्रैश होने से बचाएगा
+let envConfig: { rules?: { driverMinimumBalanceNPR?: number } } = {};
+try {
+  // eslint-disable-next-line @typescript-eslint/no-var-requires
+  const importedConfig = require('../config/env');
+  envConfig = importedConfig.CONFIG || importedConfig.default || importedConfig;
+} catch {
+  envConfig = {};
+}
+
+const DRIVER_MIN_BALANCE = envConfig.rules?.driverMinimumBalanceNPR ?? 200;
 
 export const DriverDashboard: React.FC = () => {
   const [balance, setBalance] = useState<number>(550.0);
@@ -10,7 +30,7 @@ export const DriverDashboard: React.FC = () => {
   const [withdrawMsg, setWithdrawMsg] = useState<string | null>(null);
   const [errorMsg, setErrorMsg] = useState<string | null>(null);
 
-  const minRequiredBalance = CONFIG.rules.driverMinimumBalanceNPR; // 200 NPR
+  const minRequiredBalance = DRIVER_MIN_BALANCE;
   const withdrawableBalance = Math.max(0, balance - minRequiredBalance);
 
   const handleWithdraw = (e: React.FormEvent) => {
@@ -44,7 +64,7 @@ export const DriverDashboard: React.FC = () => {
 
   return (
     <div className="w-full max-w-4xl mx-auto p-4 space-y-6">
-      {/* वॉलेट कार्ड */}
+      {/* 1. वॉलेट कार्ड */}
       <div className="bg-gradient-to-br from-zinc-900 to-zinc-800 text-white p-6 rounded-2xl shadow-xl space-y-4">
         <div className="flex items-center justify-between">
           <div className="flex items-center gap-2">
@@ -73,19 +93,18 @@ export const DriverDashboard: React.FC = () => {
         {balance < minRequiredBalance && (
           <div className="p-3 bg-red-950/70 border border-red-800 rounded-xl flex items-center gap-2 text-xs text-red-300">
             <ShieldAlert className="w-5 h-5 shrink-0 text-red-400" />
-            <span>अकाउंट लॉक: बैलेंस Rs. {minRequiredBalance} से कम हो गया है। नई राइड्स लेने के लिए तुरंत eSewa से रिचार्ज करें।</span>
+            <span>अकाउंट लॉक: बैलेंस Rs. {minRequiredBalance} से कम हो गया है। नई राइड्स लेने के लिए तुरंत रिचार्ज करें।</span>
           </div>
         )}
       </div>
 
-      {/* विथड्रॉल फॉर्म कार्ड */}
+      {/* 2. विथड्रॉल फॉर्म */}
       <div className="bg-white dark:bg-zinc-900 border border-zinc-200 dark:border-zinc-800 rounded-2xl p-6 shadow-sm space-y-4">
         <h3 className="font-bold text-zinc-900 dark:text-zinc-100 text-base flex items-center gap-2">
           <ArrowUpRight className="w-5 h-5 text-indigo-500" />
           कमाई तुरंत बैंक या eSewa में ट्रांसफर करें
         </h3>
 
-        {/* सफलता संदेश */}
         {withdrawMsg && (
           <div className="p-3 bg-emerald-50 dark:bg-emerald-950/40 border border-emerald-200 dark:border-emerald-800 rounded-xl flex items-center gap-2 text-xs text-emerald-800 dark:text-emerald-300">
             <CheckCircle2 className="w-4 h-4 shrink-0 text-emerald-500" />
@@ -93,7 +112,6 @@ export const DriverDashboard: React.FC = () => {
           </div>
         )}
 
-        {/* त्रुटि संदेश */}
         {errorMsg && (
           <div className="p-3 bg-rose-50 dark:bg-rose-950/40 border border-rose-200 dark:border-rose-800 rounded-xl flex items-center gap-2 text-xs text-rose-800 dark:text-rose-300">
             <AlertCircle className="w-4 h-4 shrink-0 text-rose-500" />
@@ -103,7 +121,6 @@ export const DriverDashboard: React.FC = () => {
 
         <form onSubmit={handleWithdraw} className="space-y-4">
           <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-            {/* निकासी रकम */}
             <div className="space-y-1.5">
               <label className="text-xs font-semibold text-zinc-600 dark:text-zinc-400 flex items-center gap-1.5">
                 <Banknote className="w-3.5 h-3.5" />
@@ -130,7 +147,6 @@ export const DriverDashboard: React.FC = () => {
               </div>
             </div>
 
-            {/* गंतव्य खाता */}
             <div className="space-y-1.5">
               <label className="text-xs font-semibold text-zinc-600 dark:text-zinc-400 flex items-center gap-1.5">
                 <Smartphone className="w-3.5 h-3.5" />
@@ -146,7 +162,6 @@ export const DriverDashboard: React.FC = () => {
             </div>
           </div>
 
-          {/* MPIN और सबमिट बटन */}
           <div className="grid grid-cols-1 md:grid-cols-2 gap-4 items-end">
             <div className="space-y-1.5">
               <label className="text-xs font-semibold text-zinc-600 dark:text-zinc-400 flex items-center gap-1.5">
@@ -181,3 +196,5 @@ export const DriverDashboard: React.FC = () => {
     </div>
   );
 };
+
+export default DriverDashboard;
