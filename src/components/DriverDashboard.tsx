@@ -71,4 +71,12 @@ export const DriverDashboard: React.FC = () => {
       </div>
 
       <div className="bg-white dark:bg-zinc-900 border border-zinc-200 dark:border-zinc-800 rounded-2xl p-6 shadow-sm space-y-4">
-        <h3 className="font-bold text-zinc-900 dark:text-zinc-100 text-base flex items-center gap-2">
+                <h3 className="font-bold text-zinc-900 dark:text-zinc-100 text-base flex items-center gap-2">
+          <ArrowUpRight className="w-5 h-5 text-indigo-500" />
+          कमाई तुरंत बैंक या eSewa में ट्रांसफर करें
+        </h3>
+      </div>
+    </div>
+  );
+};
+
