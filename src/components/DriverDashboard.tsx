@@ -1,78 +1,78 @@
 import React, { useState } from 'react';
-import { FileCheck, Upload, AlertTriangle, CheckCircle2 } from 'lucide-react';
+import { Car, DollarSign, Star, ShieldCheck, MapPin, Clock, AlertCircle } from 'lucide-react';
+import { DriverKYC } from './DriverKYC';
 import { ENV } from '../config/env';
 
-export const DriverKYC: React.FC = () => {
-  const [submitted, setSubmitted] = useState(false);
-  const [licenseNo, setLicenseNo] = useState('');
-  const [bluebookNo, setBluebookNo] = useState('');
-
-  const handleSubmit = (e: React.FormEvent) => {
-    e.preventDefault();
-    if (!licenseNo || !bluebookNo) {
-      alert('कृपया सवारी चालक अनुमतिपत्र र ब्लुबुक नम्बर अनिवार्य रूपमा भर्नुहोस्!');
-      return;
-    }
-    setSubmitted(true);
-  };
+export const DriverDashboard: React.FC = () => {
+  const [isOnline, setIsOnline] = useState(false);
+  const [kycSubmitted, setKycSubmitted] = useState(false);
 
   return (
-    <div className="bg-white rounded-3xl p-6 shadow-sm border border-gray-100 max-w-4xl mx-auto my-4">
-      <div className="flex items-center space-x-2 mb-2">
-        <FileCheck className="w-5 h-5 text-red-600" />
-        <h3 className="font-black text-gray-900 text-lg">चालक तथा डेलिभरी केवाइसी (KYC) प्रमाणीकरण</h3>
-      </div>
-      <p className="text-xs text-gray-500 mb-4">
-        सवारी चालक अनुमतिपत्र (Driving License) र ब्लुबुक अपलोड गरेपछि मात्र तपाईंको राइड आइडी सक्रिय हुनेछ।
-      </p>
-
-      {submitted ? (
-        <div className="p-4 bg-emerald-50 border border-emerald-200 rounded-2xl text-center">
-          <CheckCircle2 className="w-10 h-10 text-emerald-600 mx-auto mb-2" />
-          <h4 className="font-bold text-sm text-gray-900">कागजातहरू समीक्षाको लागि पठाइयो!</h4>
-          <p className="text-xs text-gray-600 mt-1">
-            हाम्रो टिमले २४ घण्टाभित्र प्रमाणीकरण पूरा गर्नेछ। समस्या परेमा <strong>{ENV.support.phone}</strong> मा सम्पर्क गर्नुहोस्।
-          </p>
+    <div className="max-w-5xl mx-auto p-4 space-y-6">
+      {/* Top Status Header */}
+      <div className="bg-gradient-to-r from-gray-900 to-gray-800 rounded-3xl p-6 text-white shadow-lg flex flex-col md:flex-row justify-between items-center gap-4">
+        <div>
+          <div className="flex items-center space-x-2">
+            <h2 className="text-xl font-black">चालक ड्यासबोर्ड (Driver Dashboard)</h2>
+            <span className="bg-red-600 text-white text-[10px] px-2 py-0.5 rounded-full font-bold">Hello Nepal</span>
+          </div>
+          <p className="text-gray-300 text-xs mt-1">तपाईंको राइड तथा डेलिभरी सेवा व्यवस्थापन गर्नुहोस्।</p>
         </div>
-      ) : (
-        <form onSubmit={handleSubmit} className="space-y-4">
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-            <div>
-              <label className="text-xs font-bold text-gray-700 block mb-1">लाइसेन्स नम्बर (Driving License)</label>
-              <input
-                type="text"
-                placeholder="01-06-XXXXXXXX"
-                value={licenseNo}
-                onChange={(e) => setLicenseNo(e.target.value)}
-                className="w-full p-2.5 border rounded-xl text-sm outline-none focus:ring-2 focus:ring-red-500"
-              />
-            </div>
-            <div>
-              <label className="text-xs font-bold text-gray-700 block mb-1">ब्लुबुक नम्बर (Bluebook)</label>
-              <input
-                type="text"
-                placeholder="लु ५ प XXXX"
-                value={bluebookNo}
-                onChange={(e) => setBluebookNo(e.target.value)}
-                className="w-full p-2.5 border rounded-xl text-sm outline-none focus:ring-2 focus:ring-red-500"
-              />
-            </div>
-          </div>
 
-          <div className="p-3 bg-amber-50 rounded-2xl border border-amber-200 flex items-center space-x-2 text-xs text-amber-800">
-            <AlertTriangle className="w-4 h-4 flex-shrink-0" />
-            <span>खाता सक्रिय भएपछि कम्तीमा रु. २०० सुरक्षा धरौटी कायम राख्नुपर्छ।</span>
-          </div>
-
+        <div className="flex items-center space-x-3">
+          <span className={`text-xs font-bold px-3 py-1.5 rounded-xl ${isOnline ? 'bg-emerald-500 text-white' : 'bg-gray-700 text-gray-300'}`}>
+            {isOnline ? 'अनलाइन (Online)' : 'अफलाइन (Offline)'}
+          </span>
           <button
-            type="submit"
-            className="w-full bg-gray-900 text-white font-bold py-3 rounded-xl hover:bg-black transition text-sm flex items-center justify-center space-x-1"
+            onClick={() => setIsOnline(!isOnline)}
+            className={`px-4 py-2 rounded-xl font-bold text-xs transition ${isOnline ? 'bg-red-600 text-white hover:bg-red-700' : 'bg-emerald-600 text-white hover:bg-emerald-700'}`}
           >
-            <Upload className="w-4 h-4" />
-            <span>कागजात प्रमाणीकरणको लागि पठाउनुहोस्</span>
+            {isOnline ? 'अफलाइन हुनुहोस्' : 'अनलाइन हुनुहोस्'}
           </button>
-        </form>
-      )}
+        </div>
+      </div>
+
+      {/* Stats Overview */}
+      <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
+        <div className="bg-white p-4 rounded-2xl border border-gray-100 shadow-sm">
+          <div className="flex items-center justify-between text-gray-500 mb-1">
+            <span className="text-xs font-bold">आजको कमाई</span>
+            <DollarSign className="w-4 h-4 text-emerald-600" />
+          </div>
+          <h3 className="text-lg font-black text-gray-900">रु. ०</h3>
+          <span className="text-[10px] text-emerald-600 font-semibold">० राइड्स पूरा</span>
+        </div>
+
+        <div className="bg-white p-4 rounded-2xl border border-gray-100 shadow-sm">
+          <div className="flex items-center justify-between text-gray-500 mb-1">
+            <span className="text-xs font-bold">रेटिंग</span>
+            <Star className="w-4 h-4 text-amber-500" />
+          </div>
+          <h3 className="text-lg font-black text-gray-900">५.०</h3>
+          <span className="text-[10px] text-gray-400 font-semibold">नयाँ ड्राइभर</span>
+        </div>
+
+        <div className="bg-white p-4 rounded-2xl border border-gray-100 shadow-sm">
+          <div className="flex items-center justify-between text-gray-500 mb-1">
+            <span className="text-xs font-bold">अनलाइन समय</span>
+            <Clock className="w-4 h-4 text-blue-600" />
+          </div>
+          <h3 className="text-lg font-black text-gray-900">० घन्टा</h3>
+          <span className="text-[10px] text-blue-600 font-semibold">आजको दिन</span>
+        </div>
+
+        <div className="bg-white p-4 rounded-2xl border border-gray-100 shadow-sm">
+          <div className="flex items-center justify-between text-gray-500 mb-1">
+            <span className="text-xs font-bold">केवाइसी स्थिति</span>
+            <ShieldCheck className="w-4 h-4 text-indigo-600" />
+          </div>
+          <h3 className="text-lg font-black text-gray-900">प्रमाणित</h3>
+          <span className="text-[10px] text-indigo-600 font-semibold">सक्रिय</span>
+        </div>
+      </div>
+
+      {/* KYC Component Integration */}
+      <DriverKYC />
     </div>
   );
 };
