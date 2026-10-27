@@ -1,6 +1,6 @@
 import React, { useState } from 'react';
 import { DollarSign, Star, ShieldCheck, Clock } from 'lucide-react';
-import { DriverKYC } from './DriverKYC';
+import DriverKYC from './DriverKYC';
 
 export const DriverDashboard = () => {
   const [isOnline, setIsOnline] = useState(false);
