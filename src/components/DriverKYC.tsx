@@ -1,6 +1,7 @@
 import React, { useState } from 'react';
 import { FileCheck, Upload, AlertTriangle, CheckCircle2 } from 'lucide-react';
-import { ENV } from '../config/env';
+import { ENV } from '../../config/env';
+
 
 export const DriverKYC: React.FC = () => {
   const [submitted, setSubmitted] = useState(false);
