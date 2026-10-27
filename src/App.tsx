@@ -1,11 +1,11 @@
 import React, { useState } from 'react';
-import { GeneralInfo } from './components/GeneralInfo';
-import { FAQ } from './components/FAQ';
-import { AboutHelloNepal } from './components/AboutHelloNepal';
+import GeneralInfo from './components/GeneralInfo';
+import FAQ from './components/FAQ';
+import AboutHelloNepal from './components/AboutHelloNepal';
 import { RideBooking } from './components/RideBooking';
 import { Marketplace } from './components/Marketplace';
 import DriverKYC from './components/DriverKYC';
-import { SupportChatbot } from './components/SupportChatbot';
+import SupportChatbot from './components/SupportChatbot';
 import AdminDashboard from './components/AdminDashboard';
 
 export const App: React.FC = () => {
