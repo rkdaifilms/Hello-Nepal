@@ -1,33 +1,55 @@
 'use client';
 
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 
-export const DriverKYC = () => {
+export const DriverKYC = ({ onComplete, onSuccess, onVerify }) => {
   const [licenseNo, setLicenseNo] = useState('');
   const [bluebookNo, setBluebookNo] = useState('');
   const [licenseFile, setLicenseFile] = useState(null);
   const [bluebookFile, setBluebookFile] = useState(null);
-
   const [previews, setPreviews] = useState({ license: null, bluebook: null });
+
   const [loading, setLoading] = useState(false);
   const [submitted, setSubmitted] = useState(false);
   const [error, setError] = useState('');
 
-  // फोटो छानेपछि हेर्न मिल्ने बनाउने
+  // पहले से अगर कोई डेटा सेव है तो उसे लोड कर लो ताकि ऐप मैच कर सके
+  useEffect(() => {
+    try {
+      const savedKYC = localStorage.getItem('driver_kyc_data');
+      const savedStatus = localStorage.getItem('driver_kyc_status');
+      if (savedKYC) {
+        const parsed = JSON.parse(savedKYC);
+        setLicenseNo(parsed.licenseNo || '');
+        setBluebookNo(parsed.bluebookNo || '');
+      }
+      if (savedStatus === 'pending' || savedStatus === 'verified') {
+        setSubmitted(true);
+      }
+    } catch (e) {
+      console.log('Storage read error', e);
+    }
+  }, []);
+
+  // फोटो हैंडलर
   const handleFileChange = (e, type) => {
     const file = e.target.files && e.target.files[0];
     if (file) {
-      if (type === 'license') {
-        setLicenseFile(file);
-        setPreviews((prev) => ({ ...prev, license: URL.createObjectURL(file) }));
-      } else {
-        setBluebookFile(file);
-        setPreviews((prev) => ({ ...prev, bluebook: URL.createObjectURL(file) }));
-      }
+      const reader = new FileReader();
+      reader.onloadend = () => {
+        if (type === 'license') {
+          setLicenseFile(file);
+          setPreviews((prev) => ({ ...prev, license: reader.result }));
+        } else {
+          setBluebookFile(file);
+          setPreviews((prev) => ({ ...prev, bluebook: reader.result }));
+        }
+      };
+      reader.readAsDataURL(file);
     }
   };
 
-  // फाराम बुझाउने काम
+  // सबमिट और ऐप के साथ सिंक (Sync)
   const handleSubmit = (e) => {
     e.preventDefault();
     setError('');
@@ -37,23 +59,54 @@ export const DriverKYC = () => {
       return;
     }
 
-    if (!licenseFile || !bluebookFile) {
-      setError('कृपया लाइसेन्स र ब्लुबुक दुवैको फोटो अपलोड गर्नुहोस्!');
+    if (!licenseFile && !previews.license) {
+      setError('कृपया लाइसेन्सको फोटो अपलोड गर्नुहोस्!');
+      return;
+    }
+
+    if (!bluebookFile && !previews.bluebook) {
+      setError('कृपया ब्लुबुकको फोटो अपलोड गर्नुहोस्!');
       return;
     }
 
     setLoading(true);
 
-    // सबमिट प्रक्रिया देखाउन १.५ सेकेन्डको समय
     setTimeout(() => {
+      const kycData = {
+        licenseNo: licenseNo.trim(),
+        bluebookNo: bluebookNo.trim(),
+        licenseImage: previews.license,
+        bluebookImage: previews.bluebook,
+        status: 'pending',
+        submittedAt: new Date().toISOString(),
+      };
+
+      try {
+        // ऐप के लोकल स्टोरेज में सेव ताकि बैकएंड और बाकी पेज पर डेटा मैच करे
+        localStorage.setItem('driver_kyc_data', JSON.stringify(kycData));
+        localStorage.setItem('driver_kyc_status', 'pending');
+        localStorage.setItem('is_kyc_submitted', 'true');
+
+        // पूरे ऐप में अपडेट का सिग्नल भेजो
+        window.dispatchEvent(new Event('storage'));
+        window.dispatchEvent(new CustomEvent('kycSubmitted', { detail: kycData }));
+      } catch (err) {
+        console.error('Save error', err);
+      }
+
       setLoading(false);
       setSubmitted(true);
-    }, 1500);
+
+      // अगर ऐप के मुख्य पेज ने कोई फंक्शन पास किया है तो उसे कॉल करो
+      if (typeof onSuccess === 'function') onSuccess(kycData);
+      if (typeof onComplete === 'function') onComplete(kycData);
+      if (typeof onVerify === 'function') onVerify(kycData);
+    }, 1200);
   };
 
   return (
     <div className="bg-white rounded-3xl p-6 shadow-sm border border-gray-100 max-w-4xl mx-auto my-6 font-sans">
-      {/* हेडर सेक्सन */}
+      {/* हेडर */}
       <div className="flex items-center space-x-3 mb-2">
         <div className="p-2.5 bg-red-50 rounded-2xl text-red-600 flex-shrink-0">
           <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -65,14 +118,13 @@ export const DriverKYC = () => {
             चालक तथा डेलिभरी केवाइसी (KYC) प्रमाणीकरण
           </h3>
           <p className="text-xs text-gray-500 mt-0.5">
-            सवारी चालक अनुमतिपत्र (Driving License) र ब्लुबुक अपलोड गरेपछि मात्र तपाईंको आइडी सक्रिय हुनेछ।
+            सवारी चालक अनुमतिपत्र (Driving License) र ब्लुबुक अपलोड गरेपछि मात्र तपाईंको राइड आइडी सक्रिय हुनेछ।
           </p>
         </div>
       </div>
 
       <hr className="my-4 border-gray-100" />
 
-      {/* सफल भएको स्क्रिन */}
       {submitted ? (
         <div className="p-8 bg-emerald-50 border border-emerald-200 rounded-2xl text-center">
           <div className="w-12 h-12 bg-emerald-100 text-emerald-600 rounded-full flex items-center justify-center mx-auto mb-3">
@@ -82,18 +134,13 @@ export const DriverKYC = () => {
           </div>
           <h4 className="font-bold text-base text-gray-900">कागजातहरू समीक्षाको लागि पठाइयो!</h4>
           <p className="text-xs text-gray-600 max-w-md mx-auto mt-1 leading-relaxed">
-            हाम्रो टिमले २४ घण्टाभित्र प्रमाणीकरण पूरा गर्नेछ। समस्या परेमा सपोर्ट टिममा सम्पर्क गर्नुहोस्।
+            तपाईंको विवरण सुरक्षित रूपमा पठाइएको छ। हाम्रो टिमले २४ घण्टाभित्र प्रमाणीकरण पूरा गर्नेछ।
           </p>
-          <button
-            type="button"
-            onClick={() => setSubmitted(false)}
-            className="mt-4 text-xs font-semibold text-emerald-700 underline cursor-pointer"
-          >
-            अर्को फाराम भर्नुहोस् वा सच्याउनुहोस्
-          </button>
+          <div className="mt-4 inline-block bg-white px-3 py-1.5 rounded-full border border-emerald-300 text-[11px] font-bold text-emerald-800">
+            स्थिति: प्रमाणीकरण प्रक्रियामा (Pending Verification)
+          </div>
         </div>
       ) : (
-        /* मुख्य फाराम */
         <form onSubmit={handleSubmit} className="space-y-4">
           {error && (
             <div className="p-3 bg-red-50 text-red-700 text-xs rounded-xl border border-red-200">
@@ -101,7 +148,7 @@ export const DriverKYC = () => {
             </div>
           )}
 
-          {/* नम्बर इनपुट सेक्सन */}
+          {/* नम्बर इनपुटहरू */}
           <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
             <div>
               <label className="text-xs font-bold text-gray-700 block mb-1">
@@ -112,7 +159,7 @@ export const DriverKYC = () => {
                 placeholder="उदा. 01-06-XXXXXXXX"
                 value={licenseNo}
                 onChange={(e) => setLicenseNo(e.target.value)}
-                className="w-full p-3 border border-gray-200 rounded-xl text-sm outline-none focus:ring-2 focus:ring-red-500 transition"
+                className="w-full p-3 border border-gray-200 rounded-xl text-sm outline-none focus:ring-2 focus:ring-red-500"
               />
             </div>
             <div>
@@ -124,14 +171,13 @@ export const DriverKYC = () => {
                 placeholder="उदा. बागमती प्रदेश ०२-०३० प XXXX"
                 value={bluebookNo}
                 onChange={(e) => setBluebookNo(e.target.value)}
-                className="w-full p-3 border border-gray-200 rounded-xl text-sm outline-none focus:ring-2 focus:ring-red-500 transition"
+                className="w-full p-3 border border-gray-200 rounded-xl text-sm outline-none focus:ring-2 focus:ring-red-500"
               />
             </div>
           </div>
 
-          {/* फोटो अपलोड गर्ने बक्सहरू */}
+          {/* फोटो अपलोड */}
           <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-            {/* लाइसेन्स फोटो */}
             <div>
               <label className="text-xs font-bold text-gray-700 block mb-1">
                 लाइसेन्सको फोटो <span className="text-red-500">*</span>
@@ -157,7 +203,6 @@ export const DriverKYC = () => {
               </label>
             </div>
 
-            {/* ब्लुबुक फोटो */}
             <div>
               <label className="text-xs font-bold text-gray-700 block mb-1">
                 ब्लुबुकको फोटो <span className="text-red-500">*</span>
@@ -196,10 +241,10 @@ export const DriverKYC = () => {
           <button
             type="submit"
             disabled={loading}
-            className="w-full bg-gray-900 text-white font-bold py-3.5 rounded-xl hover:bg-black transition text-sm flex items-center justify-center space-x-2 disabled:bg-gray-400 cursor-pointer disabled:cursor-not-allowed shadow-sm"
+            className="w-full bg-gray-900 text-white font-bold py-3.5 rounded-xl hover:bg-black transition text-sm flex items-center justify-center space-x-2 disabled:bg-gray-400 cursor-pointer"
           >
             {loading ? (
-              <span>अपलोड हुँदैछ, कृपया पर्खनुहोस्...</span>
+              <span>अपलोड तथा प्रमाणीकरण हुँदैछ...</span>
             ) : (
               <span>कागजात प्रमाणीकरणको लागि पठाउनुहोस्</span>
             )}
