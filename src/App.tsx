@@ -6,7 +6,7 @@ import { RideBooking } from './components/RideBooking';
 import { Marketplace } from './components/Marketplace';
 import DriverKYC from './components/DriverKYC';
 import { SupportChatbot } from './components/SupportChatbot';
-import { AdminDashboard } from './components/AdminDashboard';
+import AdminDashboard from './components/AdminDashboard';
 
 export const App: React.FC = () => {
   const [tab, setTab] = useState<'ride' | 'market' | 'kyc' | 'admin' | 'info'>('ride');
