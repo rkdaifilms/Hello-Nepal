@@ -1,18 +1,4 @@
-import React, { useState } from 'react';
-
-interface Message {
-  sender: 'user' | 'bot';
-  text: string;
-}
-
-export const SupportChatbot: React.FC = () => {
-  const [messages, setMessages] = useState<Message[]>([
-    { sender: 'bot', text: 'नमस्ते! म Hello Nepal को AI सपोर्ट बोट हूँ। तपाईलाई राइड, मार्केट वा केवाइसी बारे के सहयोग चाहिए?' }
-  ]);
-  const [input, setInput] = useState('');
-  const [loading, setLoading] = useState(false);
-
-  const handleSend = async (e: React.FormEvent) => {
+.FormEvent) => {
     e.preventDefault();
     if (!input.trim() || loading) return;
 
