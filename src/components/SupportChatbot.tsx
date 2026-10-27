@@ -1,4 +1,4 @@
-.FormEvent) => {
+FormEvent) => {
     e.preventDefault();
     if (!input.trim() || loading) return;
 
