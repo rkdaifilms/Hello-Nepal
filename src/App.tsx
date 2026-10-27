@@ -21,34 +21,46 @@ export const App: React.FC = () => {
             <span className="font-black text-lg tracking-wide">Hello Nepal</span>
           </div>
 
-          <nav className="flex space-x-1 text-xs font-bold">
-            <button onClick={() => setTab('ride')} className={`px-2.5 py-1.5 rounded-lg ${tab === 'ride' ? 'bg-white/20' : 'hover:bg-white/10'}`}>राइड</button>
-            <button onClick={() => setTab('market')} className={`px-2.5 py-1.5 rounded-lg ${tab === 'market' ? 'bg-white/20' : 'hover:bg-white/10'}`}>मार्केट</button>
-            <button onClick={() => setTab('kyc')} className={`px-2.5 py-1.5 rounded-lg ${tab === 'kyc' ? 'bg-white/20' : 'hover:bg-white/10'}`}>केवाइसी</button>
-            <button onClick={() => setTab('admin')} className={`px-2.5 py-1.5 rounded-lg ${tab === 'admin' ? 'bg-white/20' : 'hover:bg-white/10'}`}>एडमिन</button>
-            <button onClick={() => setTab('info')} className={`px-2.5 py-1.5 rounded-lg ${tab === 'info' ? 'bg-white/20' : 'hover:bg-white/10'}`}>जानकारी</button>
+          <nav className="flex space-x-1 text-xs font-bold overflow-x-auto py-1">
+            <button onClick={() => setTab('ride')} className={`px-2.5 py-1.5 rounded-lg whitespace-nowrap transition-colors ${tab === 'ride' ? 'bg-white/20 shadow-inner' : 'hover:bg-white/10'}`}>राइड</button>
+            <button onClick={() => setTab('market')} className={`px-2.5 py-1.5 rounded-lg whitespace-nowrap transition-colors ${tab === 'market' ? 'bg-white/20 shadow-inner' : 'hover:bg-white/10'}`}>मार्केट</button>
+            <button onClick={() => setTab('kyc')} className={`px-2.5 py-1.5 rounded-lg whitespace-nowrap transition-colors ${tab === 'kyc' ? 'bg-white/20 shadow-inner' : 'hover:bg-white/10'}`}>केवाइसी</button>
+            <button onClick={() => setTab('admin')} className={`px-2.5 py-1.5 rounded-lg whitespace-nowrap transition-colors ${tab === 'admin' ? 'bg-white/20 shadow-inner' : 'hover:bg-white/10'}`}>एडमिन</button>
+            <button onClick={() => setTab('info')} className={`px-2.5 py-1.5 rounded-lg whitespace-nowrap transition-colors ${tab === 'info' ? 'bg-white/20 shadow-inner' : 'hover:bg-white/10'}`}>जानकारी</button>
           </nav>
         </div>
       </header>
 
       {/* Main Body */}
-      <main className="max-w-4xl w-full mx-auto p-4 flex-grow">
+      <main className="max-w-4xl w-full mx-auto p-4 flex-grow space-y-4">
         {tab === 'ride' && (
-          <>
+          <div className="space-y-4 animate-fade-in">
             <RideBooking />
             <GeneralInfo />
-          </>
+          </div>
         )}
-        {tab === 'market' && <Marketplace />}
-        {tab === 'kyc' && <DriverKYC />}
-        {tab === 'admin' && <AdminDashboard />}
+        {tab === 'market' && (
+          <div className="animate-fade-in">
+            <Marketplace />
+          </div>
+        )}
+        {tab === 'kyc' && (
+          <div className="animate-fade-in">
+            <DriverKYC />
+          </div>
+        )}
+        {tab === 'admin' && (
+          <div className="animate-fade-in">
+            <AdminDashboard />
+          </div>
+        )}
         {tab === 'info' && (
-          <>
+          <div className="space-y-4 animate-fade-in">
+            <AboutHelloNepal />
             <GeneralInfo />
             <FAQ />
-            <AboutHelloNepal />
             <SupportChatbot />
-          </>
+          </div>
         )}
       </main>
 
