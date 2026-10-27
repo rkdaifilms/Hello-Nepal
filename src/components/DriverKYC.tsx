@@ -2,12 +2,12 @@ import React, { useState } from 'react';
 import { FileCheck, Upload, AlertTriangle, CheckCircle2 } from 'lucide-react';
 import { ENV } from '../config/env';
 
-export const DriverKYC: React.FC = () => {
-  const [submitted, setSubmitted] = useState<boolean>(false);
-  const [licenseNo, setLicenseNo] = useState<string>('');
-  const [bluebookNo, setBluebookNo] = useState<string>('');
+export const DriverKYC = () => {
+  const [submitted, setSubmitted] = useState(false);
+  const [licenseNo, setLicenseNo] = useState('');
+  const [bluebookNo, setBluebookNo] = useState('');
 
-  const handleSubmit = (e: React.FormEvent) => {
+  const handleSubmit = (e) => {
     e.preventDefault();
     if (!licenseNo || !bluebookNo) {
       alert('कृपया सवारी चालक अनुमतिपत्र र ब्लुबुक नम्बर अनिवार्य रूपमा भर्नुहोस्!');
@@ -31,7 +31,7 @@ export const DriverKYC: React.FC = () => {
           <CheckCircle2 className="w-10 h-10 text-emerald-600 mx-auto mb-2" />
           <h4 className="font-bold text-sm text-gray-900">कागजातहरू समीक्षाको लागि पठाइयो!</h4>
           <p className="text-xs text-gray-600 mt-1">
-            हाम्रो टिमले २४ घण्टाभित्र प्रमाणीकरण पूरा गर्नेछ। समस्या परेमा <strong>{ENV.support.phone}</strong> मा सम्पर्क गर्नुहोस्।
+            हाम्रो टिमले २४ घण्टाभित्र प्रमाणीकरण पूरा गर्नेछ। समस्या परेमा <strong>{ENV?.support?.phone || '9800000000'}</strong> मा सम्पर्क गर्नुहोस्।
           </p>
         </div>
       ) : (
