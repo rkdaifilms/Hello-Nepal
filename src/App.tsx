@@ -4,10 +4,9 @@ import { FAQ } from './components/FAQ';
 import { AboutHelloNepal } from './components/AboutHelloNepal';
 import { RideBooking } from './components/RideBooking';
 import { Marketplace } from './components/Marketplace';
-import { DriverKYC } from './components/DriverKYC';
+import DriverKYC from './components/DriverKYC';
 import { SupportChatbot } from './components/SupportChatbot';
 import { AdminDashboard } from './components/AdminDashboard';
-import { ENV } from './config/env';
 
 export const App: React.FC = () => {
   const [tab, setTab] = useState<'ride' | 'market' | 'kyc' | 'admin' | 'info'>('ride');
@@ -19,7 +18,7 @@ export const App: React.FC = () => {
         <div className="max-w-4xl mx-auto px-4 py-3 flex items-center justify-between">
           <div className="flex items-center space-x-2">
             <span className="bg-white text-red-600 font-black px-2 py-0.5 rounded-lg text-sm shadow">HN</span>
-            <span className="font-black text-lg tracking-wide">{ENV.appName}</span>
+            <span className="font-black text-lg tracking-wide">Hello Nepal</span>
           </div>
 
           <nav className="flex space-x-1 text-xs font-bold">
@@ -55,8 +54,10 @@ export const App: React.FC = () => {
 
       {/* Footer */}
       <footer className="bg-gray-900 text-gray-400 text-center py-4 text-xs">
-        {ENV.appName} © 2026 • {ENV.support.location} • सपोर्ट: {ENV.support.phone}
+        Hello Nepal © 2026 • Lumbini, Nepal • सपोर्ट: +977-9800000000
       </footer>
     </div>
   );
 };
+
+export default App;
