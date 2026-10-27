@@ -31,7 +31,7 @@ export const DriverKYC = () => {
           <CheckCircle2 className="w-10 h-10 text-emerald-600 mx-auto mb-2" />
           <h4 className="font-bold text-sm text-gray-900">कागजातहरू समीक्षाको लागि पठाइयो!</h4>
           <p className="text-xs text-gray-600 mt-1">
-            हाम्रो टिमले २४ घण्टाभित्र प्रमाणीकरण पूरा गर्नेछ। समस्या परेमा <strong>{ENV?.support?.phone || '9800000000'}</strong> मा सम्पर्क गर्नुहोस्।
+            हाम्रो टिमले २४ घण्टाभित्र प्रमाणीकरण पूरा गर्नेछ। समस्या परेमा सम्पर्क गर्नुहोस्।
           </p>
         </div>
       ) : (
