@@ -1,10 +1,11 @@
 import React, { useState } from 'react';
 import { FileCheck, Upload, AlertTriangle, CheckCircle2 } from 'lucide-react';
-import { ENV } from '../../config/env';
+import { ENV } from '../config/env';
+
 export const DriverKYC: React.FC = () => {
-  const [submitted, setSubmitted] = useState(false);
-  const [licenseNo, setLicenseNo] = useState('');
-  const [bluebookNo, setBluebookNo] = useState('');
+  const [submitted, setSubmitted] = useState<boolean>(false);
+  const [licenseNo, setLicenseNo] = useState<string>('');
+  const [bluebookNo, setBluebookNo] = useState<string>('');
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
