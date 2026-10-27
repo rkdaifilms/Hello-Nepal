@@ -7,9 +7,10 @@ import { Marketplace } from './components/Marketplace';
 import DriverKYC from './components/DriverKYC';
 import SupportChatbot from './components/SupportChatbot';
 import AdminDashboard from './components/AdminDashboard';
+import { Profile } from './components/Profile';
 
 export const App: React.FC = () => {
-  const [tab, setTab] = useState<'ride' | 'market' | 'kyc' | 'admin' | 'info'>('ride');
+  const [tab, setTab] = useState<'ride' | 'market' | 'kyc' | 'admin' | 'info' | 'profile'>('ride');
 
   return (
     <div className="min-h-screen flex flex-col justify-between bg-gray-100">
@@ -26,6 +27,7 @@ export const App: React.FC = () => {
             <button onClick={() => setTab('market')} className={`px-2.5 py-1.5 rounded-lg whitespace-nowrap transition-colors ${tab === 'market' ? 'bg-white/20 shadow-inner' : 'hover:bg-white/10'}`}>मार्केट</button>
             <button onClick={() => setTab('kyc')} className={`px-2.5 py-1.5 rounded-lg whitespace-nowrap transition-colors ${tab === 'kyc' ? 'bg-white/20 shadow-inner' : 'hover:bg-white/10'}`}>केवाइसी</button>
             <button onClick={() => setTab('admin')} className={`px-2.5 py-1.5 rounded-lg whitespace-nowrap transition-colors ${tab === 'admin' ? 'bg-white/20 shadow-inner' : 'hover:bg-white/10'}`}>एडमिन</button>
+            <button onClick={() => setTab('profile')} className={`px-2.5 py-1.5 rounded-lg whitespace-nowrap transition-colors ${tab === 'profile' ? 'bg-white/20 shadow-inner' : 'hover:bg-white/10'}`}>प्रोफाइल</button>
             <button onClick={() => setTab('info')} className={`px-2.5 py-1.5 rounded-lg whitespace-nowrap transition-colors ${tab === 'info' ? 'bg-white/20 shadow-inner' : 'hover:bg-white/10'}`}>जानकारी</button>
           </nav>
         </div>
@@ -36,7 +38,6 @@ export const App: React.FC = () => {
         {tab === 'ride' && (
           <div className="space-y-4 animate-fade-in">
             <RideBooking />
-            <GeneralInfo />
           </div>
         )}
         {tab === 'market' && (
@@ -54,6 +55,11 @@ export const App: React.FC = () => {
             <AdminDashboard />
           </div>
         )}
+        {tab === 'profile' && (
+          <div className="animate-fade-in">
+            <Profile />
+          </div>
+        )}
         {tab === 'info' && (
           <div className="space-y-4 animate-fade-in">
             <AboutHelloNepal />
@@ -63,11 +69,6 @@ export const App: React.FC = () => {
           </div>
         )}
       </main>
-
-      {/* Footer */}
-      <footer className="bg-gray-900 text-gray-400 text-center py-4 text-xs">
-        Hello Nepal © 2026 • Lumbini, Nepal • सपोर्ट: +977-9800000000
-      </footer>
     </div>
   );
 };
