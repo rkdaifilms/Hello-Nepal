@@ -1,3 +1,5 @@
+'use client';
+
 import React, { useState } from 'react';
 
 export const DriverKYC = () => {
@@ -11,7 +13,7 @@ export const DriverKYC = () => {
   const [submitted, setSubmitted] = useState(false);
   const [error, setError] = useState('');
 
-  // फाइल चयन और प्रिव्यू
+  // फोटो छानेपछि हेर्न मिल्ने बनाउने
   const handleFileChange = (e, type) => {
     const file = e.target.files && e.target.files[0];
     if (file) {
@@ -25,6 +27,7 @@ export const DriverKYC = () => {
     }
   };
 
+  // फाराम बुझाउने काम
   const handleSubmit = (e) => {
     e.preventDefault();
     setError('');
@@ -41,7 +44,7 @@ export const DriverKYC = () => {
 
     setLoading(true);
 
-    // डमी सबमिशन (१.५ सेकेन्ड)
+    // सबमिट प्रक्रिया देखाउन १.५ सेकेन्डको समय
     setTimeout(() => {
       setLoading(false);
       setSubmitted(true);
@@ -50,7 +53,7 @@ export const DriverKYC = () => {
 
   return (
     <div className="bg-white rounded-3xl p-6 shadow-sm border border-gray-100 max-w-4xl mx-auto my-6 font-sans">
-      {/* हेडर */}
+      {/* हेडर सेक्सन */}
       <div className="flex items-center space-x-3 mb-2">
         <div className="p-2.5 bg-red-50 rounded-2xl text-red-600 flex-shrink-0">
           <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -69,7 +72,7 @@ export const DriverKYC = () => {
 
       <hr className="my-4 border-gray-100" />
 
-      {/* सबमिट भएपछिको स्क्रिन */}
+      {/* सफल भएको स्क्रिन */}
       {submitted ? (
         <div className="p-8 bg-emerald-50 border border-emerald-200 rounded-2xl text-center">
           <div className="w-12 h-12 bg-emerald-100 text-emerald-600 rounded-full flex items-center justify-center mx-auto mb-3">
@@ -82,6 +85,7 @@ export const DriverKYC = () => {
             हाम्रो टिमले २४ घण्टाभित्र प्रमाणीकरण पूरा गर्नेछ। समस्या परेमा सपोर्ट टिममा सम्पर्क गर्नुहोस्।
           </p>
           <button
+            type="button"
             onClick={() => setSubmitted(false)}
             className="mt-4 text-xs font-semibold text-emerald-700 underline cursor-pointer"
           >
@@ -89,16 +93,15 @@ export const DriverKYC = () => {
           </button>
         </div>
       ) : (
-        /* फाराम */
+        /* मुख्य फाराम */
         <form onSubmit={handleSubmit} className="space-y-4">
           {error && (
-            <div className="p-3 bg-red-50 text-red-700 text-xs rounded-xl border border-red-200 flex items-center space-x-2">
-              <span className="font-bold">चेतावनी:</span>
-              <span>{error}</span>
+            <div className="p-3 bg-red-50 text-red-700 text-xs rounded-xl border border-red-200">
+              {error}
             </div>
           )}
 
-          {/* नम्बर इनपुटहरू */}
+          {/* नम्बर इनपुट सेक्सन */}
           <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
             <div>
               <label className="text-xs font-bold text-gray-700 block mb-1">
@@ -126,9 +129,9 @@ export const DriverKYC = () => {
             </div>
           </div>
 
-          {/* फोटो अपलोड बक्सहरू */}
+          {/* फोटो अपलोड गर्ने बक्सहरू */}
           <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-            {/* लाइसेन्स अपलोड */}
+            {/* लाइसेन्स फोटो */}
             <div>
               <label className="text-xs font-bold text-gray-700 block mb-1">
                 लाइसेन्सको फोटो <span className="text-red-500">*</span>
@@ -154,7 +157,7 @@ export const DriverKYC = () => {
               </label>
             </div>
 
-            {/* ब्लुबुक अपलोड */}
+            {/* ब्लुबुक फोटो */}
             <div>
               <label className="text-xs font-bold text-gray-700 block mb-1">
                 ब्लुबुकको फोटो <span className="text-red-500">*</span>
@@ -207,5 +210,4 @@ export const DriverKYC = () => {
   );
 };
 
-// दोनों तरह से एक्सपोर्ट (ताकि इम्पोर्ट में कभी एरर न आए)
 export default DriverKYC;
