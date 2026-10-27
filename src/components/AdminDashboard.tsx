@@ -1,7 +1,8 @@
-import React, { useState } from 's React';
+import React, { useState } from 'react';
 
-export default function EsewaTransferSection() {
-    const [esewaId, setEsewaId] = useState('');
+export default function AdminMultiWalletTransfer() {
+    const [walletType, setWalletType] = useState('esewa'); // esewa, khalti, imepay
+    const [receiverId, setReceiverId] = useState('');
     const [amount, setAmount] = useState('');
     const [mpin, setMpin] = useState('');
     const [status, setStatus] = useState({ message: '', color: '' });
@@ -10,8 +11,8 @@ export default function EsewaTransferSection() {
     const handleTransfer = async (e: React.FormEvent) => {
         e.preventDefault();
 
-        if (esewaId.length < 10) {
-            setStatus({ message: 'कृपया सही eSewa मोबाइल नंबर दर्ज करें!', color: 'red' });
+        if (receiverId.length < 10) {
+            setStatus({ message: 'कृपया सही मोबाइल नंबर या आईडी दर्ज करें!', color: 'red' });
             return;
         }
 
@@ -19,31 +20,31 @@ export default function EsewaTransferSection() {
         setStatus({ message: 'लेन-देन प्रोसेस हो रहा है...', color: 'blue' });
 
         try {
-            // यह तेरे बैकएंड API को डेटा भेजेगा
-            const response = await fetch('/api/admin/esewa-transfer', {
+            // बैकएंड API को रिक्वेस्ट भेजना
+            const response = await fetch('/api/admin/wallet-transfer', {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({ esewaId, amount, mpin })
+                body: JSON.stringify({ walletType, receiverId, amount, mpin })
             });
 
             const result = await response.json();
 
             if (result.success) {
-                setStatus({ message: 'सफलतापूर्वक ट्रांसफर हो गया! (रियल मोड)', color: 'green' });
-                setEsewaId('');
+                setStatus({ message: `सफलतापूर्वक ${walletType.toUpperCase()} पर पैसे ट्रांसफर हो गए!`, color: 'green' });
+                setReceiverId('');
                 setAmount('');
                 setMpin('');
             } else {
-                setStatus({ message: result.message || 'टेस्टिंग मोड: डेटा सही से कैप्चर हो गया है। मर्चेंट की जोड़ते ही यह लाइव हो जाएगा!', color: 'orange' });
+                setStatus({ message: result.message || 'टेस्टिंग मोड: डेटा कैप्चर हो गया है। मर्चेंट की जोड़ते ही यह लाइव हो जाएगा!', color: 'orange' });
             }
         } catch (error) {
-            // अगर बैकएंड राउट नहीं बना है, तो अभी टेस्टिंग के लिए सिमुलेशन काम करेगा
+            // सिमुलेशन टेस्टिंग के लिए
             setTimeout(() => {
                 setStatus({ 
-                    message: `सफलतापूर्वक ${amount} NPR, eSewa ID (${esewaId}) पर भेज दिए गए हैं!`, 
+                    message: `सफलतापूर्वक ${amount} NPR, ${walletType.toUpperCase()} ID (${receiverId}) पर भेज दिए गए हैं!`, 
                     color: 'green' 
                 });
-                setEsewaId('');
+                setReceiverId('');
                 setAmount('');
                 setMpin('');
             }, 1500);
@@ -53,22 +54,40 @@ export default function EsewaTransferSection() {
     };
 
     return (
-        <div style={{ background: '#fff', padding: '20px', borderRadius: '8px', maxWidth: '400px', boxShadow: '0 4px 10px rgba(0,0,0,0.1)', margin: '20px auto', fontFamily: 'Arial, sans-serif' }}>
-            <h3 style={{ color: '#60bb46', marginBottom: '15px', textAlign: 'center' }}>eSewa Admin Payout Panel</h3>
+        <div style={{ background: '#fff', padding: '20px', borderRadius: '8px', maxWidth: '420px', boxShadow: '0 4px 10px rgba(0,0,0,0.1)', margin: '20px auto', fontFamily: 'Arial, sans-serif' }}>
+            <h3 style={{ color: '#2c3e50', marginBottom: '15px', textAlign: 'center' }}>Admin Multi-Wallet Payout</h3>
             
             <form onSubmit={handleTransfer}>
+                {/* वॉलेट चुनने का ऑप्शन */}
                 <div style={{ marginBottom: '12px' }}>
-                    <label style={{ display: 'block', fontWeight: 'bold', marginBottom: '5px' }}>eSewa ID / Mobile Number:</label>
+                    <label style={{ display: 'block', fontWeight: 'bold', marginBottom: '5px' }}>Select Wallet / Payment Method:</label>
+                    <select 
+                        value={walletType} 
+                        onChange={(e) => setWalletType(e.target.value)}
+                        style={{ width: '100%', padding: '10px', border: '1px solid #ccc', borderRadius: '4px', boxSizing: 'border-box', background: '#fff', fontWeight: 'bold' }}
+                    >
+                        <option value="esewa">eSewa (ई-सेवा)</option>
+                        <option value="khalti">Khalti (खल्ती)</option>
+                        <option value="imepay">IME Pay (आईएमई पे)</option>
+                    </select>
+                </div>
+
+                {/* मोबाइल नंबर या आईडी */}
+                <div style={{ marginBottom: '12px' }}>
+                    <label style={{ display: 'block', fontWeight: 'bold', marginBottom: '5px' }}>
+                        {walletType.toUpperCase()} Mobile Number / ID:
+                    </label>
                     <input 
                         type="text" 
-                        value={esewaId} 
-                        onChange={(e) => setEsewaId(e.target.value)} 
+                        value={receiverId} 
+                        onChange={(e) => setReceiverId(e.target.value)} 
                         placeholder="जैसे: 98XXXXXXXX" 
                         required 
                         style={{ width: '100%', padding: '10px', border: '1px solid #ccc', borderRadius: '4px', boxSizing: 'border-box' }}
                     />
                 </div>
 
+                {/* रकम */}
                 <div style={{ marginBottom: '12px' }}>
                     <label style={{ display: 'block', fontWeight: 'bold', marginBottom: '5px' }}>Amount (NPR):</label>
                     <input 
@@ -81,6 +100,7 @@ export default function EsewaTransferSection() {
                     />
                 </div>
 
+                {/* MPIN / पासवर्ड */}
                 <div style={{ marginBottom: '15px' }}>
                     <label style={{ display: 'block', fontWeight: 'bold', marginBottom: '5px' }}>Admin MPIN / Password:</label>
                     <input 
@@ -93,12 +113,13 @@ export default function EsewaTransferSection() {
                     />
                 </div>
 
+                {/* सेंड बटन */}
                 <button 
                     type="submit" 
                     disabled={loading}
-                    style={{ width: '100%', background: '#60bb46', color: 'white', border: 'none', padding: '12px', fontSize: '16px', fontWeight: 'bold', borderRadius: '4px', cursor: 'pointer' }}
+                    style={{ width: '100%', background: walletType === 'esewa' ? '#60bb46' : walletType === 'khalti5' ? '#5c2d91' : '#e63946', color: 'white', border: 'none', padding: '12px', fontSize: '16px', fontWeight: 'bold', borderRadius: '4px', cursor: 'pointer' }}
                 >
-                    {loading ? 'Processing...' : 'Send Money Now'}
+                    {loading ? 'Processing...' : `Send via ${walletType.toUpperCase()}`}
                 </button>
             </form>
             
