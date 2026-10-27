@@ -1,11 +1,9 @@
 import React, { useState } from 'react';
-import { Car, DollarSign, Star, ShieldCheck, MapPin, Clock, AlertCircle } from 'lucide-react';
+import { DollarSign, Star, ShieldCheck, Clock } from 'lucide-react';
 import { DriverKYC } from './DriverKYC';
-import { ENV } from '../config/env';
 
-export const DriverDashboard: React.FC = () => {
+export const DriverDashboard = () => {
   const [isOnline, setIsOnline] = useState(false);
-  const [kycSubmitted, setKycSubmitted] = useState(false);
 
   return (
     <div className="max-w-5xl mx-auto p-4 space-y-6">
