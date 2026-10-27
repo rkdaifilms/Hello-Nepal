@@ -1,73 +1,69 @@
 import React, { useState } from 'react';
-import { Bot, Send, MessageCircle } from 'lucide-react';
 
-export const SupportChatbot: React.FC = () => {
-  const [messages, setMessages] = useState<Array<{ sender: 'bot' | 'user'; text: string }>>([
-    { sender: 'bot', text: 'नमस्ते! म Hello Nepal को AI सपोर्ट बोट हुँ। म तपाईंलाई के मद्दत गर्न सक्छु?' }
+export default function SupportChatbot() {
+  const [messages, setMessages] = useState([
+    { sender: 'bot', text: 'नमस्ते! मैं Hello Nepal का AI सपोर्ट हूँ। बताइए, आज मैं आपकी क्या मदद कर सकता हूँ?' }
   ]);
   const [input, setInput] = useState('');
 
-  const handleSend = () => {
+  const handleSend = (e: React.FormEvent) => {
+    e.preventDefault();
     if (!input.trim()) return;
-    const userMsg = input;
-    setMessages((prev) => [...prev, { sender: 'user', text: userMsg }]);
+
+    const userText = input;
+    const newMessages = [...messages, { sender: 'user', text: userText }];
+    setMessages(newMessages);
     setInput('');
 
     setTimeout(() => {
-      let reply = 'हाम्रो आधिकारिक टिमलाई सम्पर्क गर्न तल दिएको व्हाट्सएप बटनमा क्लिक गर्नुहोस्।';
-      if (userMsg.toLowerCase().includes('fare') || userMsg.includes('भाडा')) {
-        reply = 'बुटवल-भैरहवा रुटमा बाइकको भाडा रु. १८० र अटोको रु. ३५० तोकिएको छ।';
-      } else if (userMsg.includes('withdraw') || userMsg.includes('निकाल्न')) {
-        reply = 'तपाईं आफ्नो प्रोफाइलबाट eSewa वा Khalti मा सिधै कुनै पनि समय पैसा निकाल्न सक्नुहुन्छ।';
+      let botReply = '';
+      const lower = userText.toLowerCase();
+
+      if (lower.includes('fraud') || lower.includes('scam') || lower.includes('धोखा') || lower.includes('फ्रॉड') || lower.includes('fake') || lower.includes('पैसा चुरा') || lower.includes('cheat')) {
+        botReply = '⚠️ चेतावनी: धोखाधड़ी या स्पैम का संदेह है! आपकी शिकायत तुरंत एडमिन के पास भेज दी गई है। कृपया तुरंत हमारे आधिकारिक व्हाट्सएप (+977-9800000000) या जीमेल (support@hellonepal.com) पर संपर्क करें।';
+      } else if (lower.includes('ride') || lower.includes('राइड') || lower.includes('बुक')) {
+        botReply = '🚗 आप होमपेज पर जाकर 'राइड' टैब से आसानी से अपनी बाइक या टैक्सी बुक कर सकते हैं।';
+      } else if (lower.includes('kyc') || lower.includes('केवाइसी')) {
+        botReply = '📝 ड्राइवर केवाइसी के लिए ऊपर दिए गए 'केवाइसी' टैब पर क्लिक करें।';
+      } else {
+        botReply = '👍 मैंने आपकी बात नोट कर ली है। किसी भी प्रकार की धोखाधड़ी या शिकायत के लिए सीधे एडमिन سے संपर्क करें: व्हाट्सएप (+977-9800000000) | ईमेल (support@hellonepal.com)।';
       }
-      setMessages((prev) => [...prev, { sender: 'bot', text: reply }]);
-    }, 600);
+
+      setMessages(prev => [...prev, { sender: 'bot', text: botReply }]);
+    }, 1000);
   };
 
   return (
-    <div className="bg-white rounded-3xl p-6 shadow-sm border border-gray-100 max-w-4xl mx-auto my-4">
-      <div className="flex items-center justify-between mb-4 border-b pb-3">
-        <div className="flex items-center space-x-2">
-          <Bot className="w-5 h-5 text-red-600" />
-          <h3 className="font-black text-gray-900 text-lg">AI सहायता केन्द्र (२४/७ Live)</h3>
-        </div>
-        <a
-          href="https://wa.me/9779811522480"
-          target="_blank"
-          rel="noreferrer"
-          className="bg-emerald-600 text-white text-xs font-bold px-3 py-1.5 rounded-xl flex items-center space-x-1"
-        >
-          <MessageCircle className="w-3.5 h-3.5" />
-          <span>व्हाट्सएप</span>
+    <div style={{ background: '#fff', padding: '16px', borderRadius: '8px', marginBottom: '12px', boxShadow: '0 2px 5px rgba(0,0,0,0.05)' }}>
+      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '10px' }}>
+        <h3 style={{ margin: 0, color: '#c0392b', fontSize: '18px' }}>🤖 AI सहायता केन्द्र (24/7 Live)</h3>
+        <a href="https://wa.me/9779800000000" target="_blank" rel="noreferrer" style={{ background: '#25D366', color: '#fff', padding: '5px 10px', borderRadius: '5px', textDecoration: 'none', fontSize: '12px', fontWeight: 'bold' }}>
+          WhatsApp 💬
         </a>
       </div>
 
-      <div className="h-44 overflow-y-auto space-y-2 mb-4 p-3 bg-gray-50 rounded-2xl border text-xs">
-        {messages.map((m, i) => (
-          <div key={i} className={`flex ${m.sender === 'user' ? 'justify-end' : 'justify-start'}`}>
-            <span
-              className={`p-2.5 rounded-2xl max-w-xs ${
-                m.sender === 'user' ? 'bg-red-600 text-white' : 'bg-white border text-gray-800'
-              }`}
-            >
+      <div style={{ height: '180px', overflowY: 'auto', background: '#f9f9f9', padding: '10px', borderRadius: '6px', marginBottom: '10px', border: '1px solid #eee' }}>
+        {messages.map((m, idx) => (
+          <div key={idx} style={{ textAlign: m.sender === 'user' ? 'right' : 'left', margin: '6px 0' }}>
+            <span style={{ display: 'inline-block', padding: '8px 12px', borderRadius: '8px', fontSize: '13px', background: m.sender === 'user' ? '#3498db' : '#e2e8f0', color: m.sender === 'user' ? '#fff' : '#333', maxWidth: '85%', textAlign: 'left' }}>
               {m.text}
             </span>
           </div>
         ))}
       </div>
 
-      <div className="flex space-x-2">
-        <input
-          value={input}
-          onChange={(e) => setInput(e.target.value)}
-          placeholder="कुनै प्रश्न सोध्नुहोस्..."
-          className="flex-1 border rounded-xl px-3 py-2 text-xs outline-none focus:ring-2 focus:ring-red-500"
-          onKeyDown={(e) => e.key === 'Enter' && handleSend()}
+      <form onSubmit={handleSend} style={{ display: 'flex', gap: '8px' }}>
+        <input 
+          type="text" 
+          value={input} 
+          onChange={(e) => setInput(e.target.value)} 
+          placeholder="अपना सवाल या शिकायत यहाँ लिखें..." 
+          style={{ flex: 1, padding: '8px', borderRadius: '4px', border: '1px solid #ccc', fontSize: '13px' }} 
         />
-        <button onClick={handleSend} className="bg-red-600 text-white p-2.5 rounded-xl hover:bg-red-700">
-          <Send className="w-4 h-4" />
+        <button type="submit" style={{ background: '#c0392b', color: '#fff', border: 'none', padding: '8px 14px', borderRadius: '4px', fontWeight: 'bold', cursor: 'pointer', fontSize: '13px' }}>
+          भेजें
         </button>
-      </div>
+      </form>
     </div>
   );
-};
+}
