@@ -1,7 +1,8 @@
-import React, { useState, useRef } from 'react';
+
+import React, { useState } from 'react';
 import { GoogleGenAI } from '@google/genai';
 import { CONFIG } from '../config/env';
-import { Send, Bot, User, Loader2, Sparkles, Mic, MicOff, Square } from 'lucide-react';
+import { Send, Bot, User, Loader2, Sparkles, Mic, Square } from 'lucide-react';
 
 interface Message {
   role: 'user' | 'model';
@@ -15,41 +16,9 @@ export const SupportChatbot: React.FC = () => {
   const [input, setInput] = useState('');
   const [loading, setLoading] = useState(false);
   const [useOpenRouter, setUseOpenRouter] = useState(false);
-  
-  // Voice Recording States
   const [isRecording, setIsRecording] = useState(false);
-  const mediaRecorderRef = useRef<MediaRecorder | null>(null);
-  const audioChunksRef = useRef<Blob[]>([]);
 
-  // वॉयस रिकॉर्डिंग शुरू करने के लिए
-  const startRecording = async () => {
-    try {
-      const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
-      const mediaRecorder = new MediaRecorder(stream);
-      mediaRecorderRef.current = mediaRecorder;
-      audioChunksRef.current = [];
-
-      mediaRecorder.ondataavailable = (event) => {
-        if (event.data.size > 0) {
-          audioChunksRef.current.push(event.data);
-        }
-      };
-
-      mediaRecorder.onstop = () => {
-        const audioBlob = new Blob(audioChunksRef.current, { type: 'audio/webm' });
-        // यहाँ चाहें तो ऑडियो को टेक्स्ट में बदलने का लॉजिक लगा सकते हैं या स्पीच रिकॉग्निशन इस्तेमाल कर सकते हैं
-        console.log("Audio recorded:", audioBlob);
-      };
-
-      mediaRecorder.start();
-      setIsRecording(true);
-    } catch (err) {
-      console.error("Microphone access error:", err);
-      alert("माइक्रोफ़ोन की अनुमति नहीं मिल पा रही है!");
-    }
-  };
-
-  // वेब ब्राउज़र की स्पीच रिकॉग्निशन (बोलकर टाइप करने के लिए)
+  // बोलकर टाइप करने वाला वॉइस फीचर (Speech Recognition)
   const startSpeechRecognition = () => {
     const SpeechRecognition = (window as any).SpeechRecognition || (window as any).webkitSpeechRecognition;
     if (!SpeechRecognition) {
@@ -58,7 +27,7 @@ export const SupportChatbot: React.FC = () => {
     }
 
     const recognition = new SpeechRecognition();
-    recognition.lang = 'hi-IN'; // हिंदी, नेपाली या अंग्रेजी के लिए
+    recognition.lang = 'hi-IN';
     recognition.interimResults = true;
 
     recognition.onstart = () => {
@@ -225,3 +194,4 @@ export const SupportChatbot: React.FC = () => {
       </div>
     </div>
   );
+};
