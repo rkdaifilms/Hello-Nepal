@@ -1,7 +1,7 @@
-import React, { useState } from 'react';
+import React, { useState, useRef } from 'react';
 import { GoogleGenAI } from '@google/genai';
 import { CONFIG } from '../config/env';
-import { Send, Bot, User, Loader2, Sparkles } from 'lucide-react';
+import { Send, Bot, User, Loader2, Sparkles, Mic, MicOff, Square } from 'lucide-react';
 
 interface Message {
   role: 'user' | 'model';
@@ -15,9 +15,83 @@ export const SupportChatbot: React.FC = () => {
   const [input, setInput] = useState('');
   const [loading, setLoading] = useState(false);
   const [useOpenRouter, setUseOpenRouter] = useState(false);
+  
+  // Voice Recording States
+  const [isRecording, setIsRecording] = useState(false);
+  const mediaRecorderRef = useRef<MediaRecorder | null>(null);
+  const audioChunksRef = useRef<Blob[]>([]);
 
-  const handleSend = async (e: React.FormEvent) => {
-    e.preventDefault();
+  // वॉयस रिकॉर्डिंग शुरू करने के लिए
+  const startRecording = async () => {
+    try {
+      const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
+      const mediaRecorder = new MediaRecorder(stream);
+      mediaRecorderRef.current = mediaRecorder;
+      audioChunksRef.current = [];
+
+      mediaRecorder.ondataavailable = (event) => {
+        if (event.data.size > 0) {
+          audioChunksRef.current.push(event.data);
+        }
+      };
+
+      mediaRecorder.onstop = () => {
+        const audioBlob = new Blob(audioChunksRef.current, { type: 'audio/webm' });
+        // यहाँ चाहें तो ऑडियो को टेक्स्ट में बदलने का लॉजिक लगा सकते हैं या स्पीच रिकॉग्निशन इस्तेमाल कर सकते हैं
+        console.log("Audio recorded:", audioBlob);
+      };
+
+      mediaRecorder.start();
+      setIsRecording(true);
+    } catch (err) {
+      console.error("Microphone access error:", err);
+      alert("माइक्रोफ़ोन की अनुमति नहीं मिल पा रही है!");
+    }
+  };
+
+  // वेब ब्राउज़र की स्पीच रिकॉग्निशन (बोलकर टाइप करने के लिए)
+  const startSpeechRecognition = () => {
+    const SpeechRecognition = (window as any).SpeechRecognition || (window as any).webkitSpeechRecognition;
+    if (!SpeechRecognition) {
+      alert("आपका ब्राउज़र वॉइस रिकॉर्डिंग सपोर्ट नहीं करता है।");
+      return;
+    }
+
+    const recognition = new SpeechRecognition();
+    recognition.lang = 'hi-IN'; // हिंदी, नेपाली या अंग्रेजी के लिए
+    recognition.interimResults = true;
+
+    recognition.onstart = () => {
+      setIsRecording(true);
+    };
+
+    recognition.onresult = (event: any) => {
+      let transcript = '';
+      for (let i = event.resultIndex; i < event.results.length; i++) {
+        transcript += event.results[i][0].transcript;
+      }
+      setInput(transcript);
+    };
+
+    recognition.onerror = (event: any) => {
+      console.error("Speech recognition error", event.error);
+      setIsRecording(false);
+    };
+
+    recognition.onend = () => {
+      setIsRecording(false);
+    };
+
+    if (isRecording) {
+      recognition.stop();
+      setIsRecording(false);
+    } else {
+      recognition.start();
+    }
+  };
+
+  const handleSend = async (e?: React.FormEvent) => {
+    if (e) e.preventDefault();
     if (!input.trim() || loading) return;
 
     const userMessage = input.trim();
@@ -29,7 +103,7 @@ export const SupportChatbot: React.FC = () => {
       let replyText = '';
 
       if (useOpenRouter) {
-        // OpenRouter API का इस्तेमाल (OpenAI/GPT मॉडल)
+        // OpenRouter / OpenAI API का इस्तेमाल
         const res = await fetch('https://openrouter.ai/api/v1/chat/completions', {
           method: 'POST',
           headers: {
@@ -41,7 +115,7 @@ export const SupportChatbot: React.FC = () => {
           body: JSON.stringify({
             model: 'openai/gpt-4o-mini',
             messages: [
-              { role: 'system', content: 'You are an advanced AI helper integrated into Hello Nepal app.' },
+              { role: 'system', content: 'You are an advanced AI helper integrated into Hello Nepal app. Answer user queries accurately and professionally.' },
               { role: 'user', content: userMessage }
             ]
           })
@@ -75,7 +149,7 @@ export const SupportChatbot: React.FC = () => {
         <div className="p-4 border-b border-zinc-200 dark:border-zinc-800 flex items-center justify-between bg-zinc-50 dark:bg-zinc-800/50">
           <div className="flex items-center gap-2">
             <Bot className="w-5 h-5 text-red-600" />
-            <h2 className="font-bold text-sm text-zinc-900 dark:text-zinc-100">Hello Nepal AI सपोर्ट</h2>
+            <h2 className="font-bold text-sm text-zinc-900 dark:text-zinc-100">Hello Nepal AI सपोर्ट (24/7)</h2>
           </div>
           <button
             type="button"
@@ -85,7 +159,7 @@ export const SupportChatbot: React.FC = () => {
             }`}
           >
             <Sparkles className="w-3 h-3" />
-            {useOpenRouter ? 'Mode: OpenRouter' : 'Mode: Gemini'}
+            {useOpenRouter ? 'Mode: OpenAI / OpenRouter' : 'Mode: Gemini AI'}
           </button>
         </div>
 
@@ -118,18 +192,30 @@ export const SupportChatbot: React.FC = () => {
           )}
         </div>
 
-        {/* Input Form */}
-        <form onSubmit={handleSend} className="p-3 border-t border-zinc-200 dark:border-zinc-800 flex gap-2 bg-white dark:bg-zinc-900">
+        {/* Input Form with Mic and Send Button */}
+        <form onSubmit={handleSend} className="p-3 border-t border-zinc-200 dark:border-zinc-800 flex items-center gap-2 bg-white dark:bg-zinc-900">
+          <button
+            type="button"
+            onClick={startSpeechRecognition}
+            className={`p-2.5 rounded-xl text-xs font-bold transition-colors flex items-center justify-center ${
+              isRecording ? 'bg-red-600 text-white animate-pulse' : 'bg-zinc-100 dark:bg-zinc-800 text-zinc-600 dark:text-zinc-300 hover:bg-zinc-200'
+            }`}
+            title="बोलकर टाइप करें (Voice Input)"
+          >
+            {isRecording ? <Square className="w-4 h-4" /> : <Mic className="w-4 h-4" />}
+          </button>
+
           <input
             type="text"
-            placeholder={useOpenRouter ? "OpenRouter से कुछ पूछें..." : "Gemini से कुछ पूछें..."}
+            placeholder={isRecording ? "सुन रहा हूँ... बोलिए..." : (useOpenRouter ? "OpenRouter से कुछ पूछें..." : "Gemini से कुछ पूछें...")}
             value={input}
             onChange={(e) => setInput(e.target.value)}
             className="flex-1 px-3 py-2 text-xs border border-zinc-200 dark:border-zinc-700 rounded-xl bg-transparent text-zinc-900 dark:text-zinc-100 focus:outline-none focus:border-red-600"
           />
+
           <button
             type="submit"
-            disabled={loading}
+            disabled={loading || !input.trim()}
             className="p-2.5 bg-red-600 hover:bg-red-700 text-white rounded-xl font-bold text-xs shadow-md transition-colors disabled:opacity-50 flex items-center justify-center"
           >
             <Send className="w-4 h-4" />
@@ -139,4 +225,3 @@ export const SupportChatbot: React.FC = () => {
       </div>
     </div>
   );
-};
