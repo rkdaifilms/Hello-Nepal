@@ -3,7 +3,7 @@ import { Navigation, MapPin, Bike, Car, Shield, Compass, Sparkles, ArrowRight, C
 import mapboxgl from 'mapbox-gl';
 import 'mapbox-gl/dist/mapbox-gl.css';
 
-// तेरा असली Mapbox Public Access Token
+// Mapbox Token
 mapboxgl.accessToken = 'pk.eyJ1IjoicmtkYWlmaWxtcyIsImEiOiJjbXZveDdtOHUweGIyMnpxeGtxemJjODV5In0.2BCQn8iiApvGhcXV-ez8Vg';
 
 export const RideBooking: React.FC = () => {
@@ -12,7 +12,6 @@ export const RideBooking: React.FC = () => {
   const [dropoff, setDropoff] = useState('Gautam Buddha Airport, Bhairahawa');
   const [bookingStatus, setBookingStatus] = useState<'idle' | 'searching' | 'confirmed'>('idle');
   
-  // AI रॉन्ग टर्न और वार्निंग स्टेट
   const [isWrongTurn, setIsWrongTurn] = useState(false);
   const [aiWarningMessage, setAiWarningMessage] = useState<string | null>(null);
   const [isCheckingAI, setIsCheckingAI] = useState(false);
@@ -31,52 +30,43 @@ export const RideBooking: React.FC = () => {
   const calculatedFare = currentRide.price;
 
   useEffect(() => {
-    // सुरक्षित मैप इनिशियलाइजेशन ताकि कभी ऐप क्रैश न हो
     if (mapContainer.current && !mapInstance.current) {
       try {
         const map = new mapboxgl.Map({
           container: mapContainer.current,
           style: 'mapbox://styles/mapbox/navigation-night-v1',
           center: [83.4556, 27.7005],
-          zoom: 15,
-          pitch: 50,
-          bearing: -10
+          zoom: 14.5,
+          pitch: 45,
         });
 
         mapInstance.current = map;
 
         map.on('load', () => {
-          try {
-            map.resize();
-          } catch (e) {
-            console.error(e);
-          }
+          map.resize();
         });
 
-        // GPS मार्कर
         new mapboxgl.Marker({ color: '#ef4444' })
           .setLngLat([83.4556, 27.7005])
           .addTo(map);
-      } catch (err) {
-        console.error("Mapbox init error:", err);
+      } catch (e) {
+        console.error("Map load error:", e);
       }
     }
   }, []);
 
-  // AI स्मार्ट रॉन्ग टर्न और रूट सेफ्टी चेकर
   const runSmartAIRouteCheck = () => {
     setIsCheckingAI(true);
-    setAiWarningMessage('🤖 AI स्मार्ट नेविगेशन: रूट का विश्लेषण किया जा रहा है...');
+    setAiWarningMessage('🤖 AI स्मार्ट नेविगेशन: रूट की जाँच हो रही है...');
 
     setTimeout(() => {
       const simulateWrongTurn = Math.random() > 0.5;
-      
       if (simulateWrongTurn) {
         setIsWrongTurn(true);
-        setAiWarningMessage('⚠️ AI सुरक्षा चेतावनी: ड्राइवर निर्धारित रूट से बाहर जा रहा है! यह गलत रास्ता (Wrong Turn) है।');
+        setAiWarningMessage('⚠️ AI सुरक्षा चेतावनी: ड्राइवर गलत रास्ते (Wrong Turn) पर जा रहा है!');
       } else {
         setIsWrongTurn(false);
-        setAiWarningMessage('✅ AI नेविगेशन: वाहन बिल्कुल सही रास्ते पर है। मार्ग सुरक्षित है।');
+        setAiWarningMessage('✅ AI नेविगेशन: वाहन बिल्कुल सही रास्ते पर है।');
       }
       setIsCheckingAI(false);
     }, 1500);
@@ -87,56 +77,39 @@ export const RideBooking: React.FC = () => {
     setTimeout(() => {
       setBookingStatus('confirmed');
       runSmartAIRouteCheck();
-    }, 2500);
+    }, 2000);
   };
 
   return (
-    <div className="space-y-4 pb-12 max-w-md mx-auto">
-      {/* Top Header Banner */}
-      <div className="relative overflow-hidden rounded-3xl p-5 bg-gradient-to-r from-red-600 via-rose-600 to-orange-600 text-white shadow-xl">
-        <div className="flex items-center justify-between">
-          <div>
-            <div className="flex items-center space-x-1.5 bg-black/20 px-3 py-1 rounded-full w-fit text-[11px] font-semibold mb-1.5 border border-white/10">
-              <Sparkles className="w-3 h-3 text-yellow-300 animate-spin" />
-              <span>Mapbox 3D + AI नेविगेशन</span>
-            </div>
-            <h1 className="text-xl font-black tracking-wide">Hello Nepal राइड्स</h1>
-            <p className="text-xs text-white/80">पठाओ जैसा 3D रोड व्यू</p>
-          </div>
-          <div className="w-10 h-10 rounded-2xl bg-white/20 flex items-center justify-center">
-            <Compass className="w-6 h-6 text-white animate-pulse" />
-          </div>
+    <div className="space-y-4 pb-12 max-w-md mx-auto p-4">
+      <div className="bg-gradient-to-r from-red-600 to-orange-600 text-white p-5 rounded-2xl shadow-lg">
+        <h1 className="text-xl font-bold">Hello Nepal राइड्स</h1>
+        <p className="text-xs text-white/80">बुटवल - भैरहवा 3D नेविगेशन</p>
+      </div>
+
+      {/* Mapbox Container - फिक्स हाइट के साथ ताकि मैप कभी गायब न हो */}
+      <div className="relative w-full rounded-2xl overflow-hidden shadow-md border border-gray-300 bg-zinc-900" style={{ height: '320px' }}>
+        <div ref={mapContainer} style={{ width: '100%', height: '100%', position: 'absolute', top: 0, left: 0 }} />
+        <div className="absolute bottom-2 left-2 bg-black/80 px-2.5 py-1 rounded-lg text-[10px] text-white font-bold z-10 shadow">
+          📍 बुटवल-भैरहवा 3D रोड रडार
         </div>
       </div>
 
-      {/* Mapbox 3D GPS Map View (फिक्स्ड और स्टेबल) */}
-      <div className="relative h-60 w-full rounded-3xl overflow-hidden shadow-xl border-2 border-red-500/30 bg-zinc-900">
-        <div ref={mapContainer} className="absolute inset-0 w-full h-full" />
-        <div className="absolute bottom-2 left-2 bg-black/80 backdrop-blur-md px-2.5 py-1 rounded-xl text-[10px] text-white font-bold flex items-center space-x-1 z-10 shadow">
-          <span className="w-2 h-2 rounded-full bg-red-500 animate-ping"></span>
-          <span>बुटवल-भैरहवा 3D रडार एक्टिव</span>
-        </div>
-      </div>
-
-      {/* AI Wrong Turn Warning Box */}
       {aiWarningMessage && (
-        <div className={`p-3.5 rounded-2xl border flex items-center space-x-3 shadow-lg transition-all ${isWrongTurn ? 'bg-red-950/95 border-red-500 text-red-200' : 'bg-emerald-950/95 border-emerald-500 text-emerald-200'}`}>
-          <AlertTriangle className={`w-5 h-5 flex-shrink-0 ${isWrongTurn ? 'text-red-400 animate-pulse' : 'text-emerald-400'}`} />
-          <div className="text-xs font-bold leading-relaxed">
-            {aiWarningMessage}
-          </div>
+        <div className={`p-3 rounded-xl border text-xs font-bold ${isWrongTurn ? 'bg-red-950 border-red-500 text-red-200' : 'bg-emerald-950 border-emerald-500 text-emerald-200'}`}>
+          {aiWarningMessage}
         </div>
       )}
 
       {/* Booking Form Card */}
-      <div className="bg-white rounded-3xl p-5 shadow-xl border border-gray-100 space-y-4">
+      <div className="bg-white rounded-2xl p-4 shadow-md space-y-4">
         <div className="space-y-2.5">
           <div className="flex items-center space-x-3 bg-gray-50 p-3 rounded-2xl border border-gray-200">
             <div className="w-7 h-7 rounded-xl bg-emerald-500/10 text-emerald-600 flex items-center justify-center flex-shrink-0">
               <MapPin className="w-4 h-4" />
             </div>
             <div className="flex-grow">
-              <p className="text-[10px] uppercase tracking-wider font-bold text-gray-400">पिकअप लोकेशन</p>
+              <p className="text-[10px] uppercase tracking-wider font-bold text-gray-400">पिकअप लोकेशन (कहाँ से)</p>
               <input 
                 type="text" 
                 value={pickup} 
@@ -151,7 +124,7 @@ export const RideBooking: React.FC = () => {
               <MapPin className="w-4 h-4" />
             </div>
             <div className="flex-grow">
-              <p className="text-[10px] uppercase tracking-wider font-bold text-gray-400">ड्रॉप लोकेशन</p>
+              <p className="text-[10px] uppercase tracking-wider font-bold text-gray-400">ड्रॉप लोकेशन (कहाँ तक)</p>
               <input 
                 type="text" 
                 value={dropoff} 
@@ -263,8 +236,6 @@ export const RideBooking: React.FC = () => {
     </div>
   );
 };
-    
-  
 
        
                
