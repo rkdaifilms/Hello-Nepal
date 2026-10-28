@@ -1,8 +1,7 @@
-
 import React, { useState } from 'react';
 import { GoogleGenAI } from '@google/genai';
 import { CONFIG } from '../config/env';
-import { Send, Bot, User, Loader2, Sparkles, Mic, Square } from 'lucide-react';
+import { Send, Bot, User, Loader2, Sparkles } from 'lucide-react';
 
 interface Message {
   role: 'user' | 'model';
@@ -16,51 +15,9 @@ export const SupportChatbot: React.FC = () => {
   const [input, setInput] = useState('');
   const [loading, setLoading] = useState(false);
   const [useOpenRouter, setUseOpenRouter] = useState(false);
-  const [isRecording, setIsRecording] = useState(false);
 
-  // बोलकर टाइप करने वाला वॉइस फीचर (Speech Recognition)
-  const startSpeechRecognition = () => {
-    const SpeechRecognition = (window as any).SpeechRecognition || (window as any).webkitSpeechRecognition;
-    if (!SpeechRecognition) {
-      alert("आपका ब्राउज़र वॉइस रिकॉर्डिंग सपोर्ट नहीं करता है।");
-      return;
-    }
-
-    const recognition = new SpeechRecognition();
-    recognition.lang = 'hi-IN';
-    recognition.interimResults = true;
-
-    recognition.onstart = () => {
-      setIsRecording(true);
-    };
-
-    recognition.onresult = (event: any) => {
-      let transcript = '';
-      for (let i = event.resultIndex; i < event.results.length; i++) {
-        transcript += event.results[i][0].transcript;
-      }
-      setInput(transcript);
-    };
-
-    recognition.onerror = (event: any) => {
-      console.error("Speech recognition error", event.error);
-      setIsRecording(false);
-    };
-
-    recognition.onend = () => {
-      setIsRecording(false);
-    };
-
-    if (isRecording) {
-      recognition.stop();
-      setIsRecording(false);
-    } else {
-      recognition.start();
-    }
-  };
-
-  const handleSend = async (e?: React.FormEvent) => {
-    if (e) e.preventDefault();
+  const handleSend = async (e: React.FormEvent) => {
+    e.preventDefault();
     if (!input.trim() || loading) return;
 
     const userMessage = input.trim();
@@ -161,27 +118,15 @@ export const SupportChatbot: React.FC = () => {
           )}
         </div>
 
-        {/* Input Form with Mic and Send Button */}
+        {/* Input Form */}
         <form onSubmit={handleSend} className="p-3 border-t border-zinc-200 dark:border-zinc-800 flex items-center gap-2 bg-white dark:bg-zinc-900">
-          <button
-            type="button"
-            onClick={startSpeechRecognition}
-            className={`p-2.5 rounded-xl text-xs font-bold transition-colors flex items-center justify-center ${
-              isRecording ? 'bg-red-600 text-white animate-pulse' : 'bg-zinc-100 dark:bg-zinc-800 text-zinc-600 dark:text-zinc-300 hover:bg-zinc-200'
-            }`}
-            title="बोलकर टाइप करें (Voice Input)"
-          >
-            {isRecording ? <Square className="w-4 h-4" /> : <Mic className="w-4 h-4" />}
-          </button>
-
           <input
             type="text"
-            placeholder={isRecording ? "सुन रहा हूँ... बोलिए..." : (useOpenRouter ? "OpenRouter से कुछ पूछें..." : "Gemini से कुछ पूछें...")}
+            placeholder={useOpenRouter ? "OpenRouter से कुछ पूछें..." : "Gemini से कुछ पूछें..."}
             value={input}
             onChange={(e) => setInput(e.target.value)}
             className="flex-1 px-3 py-2 text-xs border border-zinc-200 dark:border-zinc-700 rounded-xl bg-transparent text-zinc-900 dark:text-zinc-100 focus:outline-none focus:border-red-600"
           />
-
           <button
             type="submit"
             disabled={loading || !input.trim()}
