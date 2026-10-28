@@ -98,3 +98,86 @@ export const Marketplace: React.FC = () => {
             >
               {cat}
             </button>
+          ))}
+        </div>
+      </div>
+
+      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
+        {filteredProducts.map((product) => (
+          <div
+            key={product.id}
+            className="bg-white dark:bg-zinc-900 border border-zinc-200 dark:border-zinc-800 rounded-2xl overflow-hidden shadow-sm hover:shadow-md transition-shadow flex flex-col justify-between"
+          >
+            <div>
+              <div className="relative h-48 w-full overflow-hidden bg-zinc-100 dark:bg-zinc-800">
+                <img
+                  src={product.imageUrl}
+                  alt={product.title}
+                  className="w-full h-full object-cover"
+                />
+                <span className="absolute top-3 left-3 bg-black/60 backdrop-blur-md text-white text-[10px] font-medium px-2.5 py-1 rounded-full">
+                  {product.category}
+                </span>
+              </div>
+              <div className="p-4 space-y-2">
+                <div className="text-xs text-zinc-500 dark:text-zinc-400 font-medium">
+                  {product.vendorName}
+                </div>
+                <h3 className="text-sm font-bold text-zinc-900 dark:text-zinc-100 line-clamp-1">
+                  {product.title}
+                </h3>
+                <p className="text-xs text-zinc-600 dark:text-zinc-300 line-clamp-2">
+                  {product.description}
+                </p>
+              </div>
+            </div>
+
+            <div className="p-4 pt-0 space-y-3">
+              <div className="flex items-center justify-between">
+                <div>
+                  <span className="text-xs text-zinc-400">মূল्य</span>
+                  <div className="text-base font-extrabold text-red-600">
+                    रु {product.markupPrice}
+                  </div>
+                </div>
+                <div className="text-right">
+                  <span className="text-xs text-zinc-400">स्टॉक</span>
+                  <div className="text-xs font-semibold text-zinc-700 dark:text-zinc-300">
+                    {product.stockCount} पीस
+                  </div>
+                </div>
+              </div>
+
+              <div className="flex items-center gap-2">
+                <button
+                  onClick={() => setSelectedProduct(product)}
+                  className="flex-1 bg-red-600 hover:bg-red-700 text-white py-2 rounded-xl text-xs font-bold transition-colors shadow-sm"
+                >
+                  खरीदें (Buy Now)
+                </button>
+                <button
+                  onClick={() => handleShare(product)}
+                  className="p-2 bg-zinc-100 dark:bg-zinc-800 hover:bg-zinc-200 dark:hover:bg-zinc-700 text-zinc-700 dark:text-zinc-300 rounded-xl transition-colors"
+                  title="शेयर करें"
+                >
+                  {copiedId === product.id ? (
+                    <Check className="w-4 h-4 text-green-600" />
+                  ) : (
+                    <Share2 className="w-4 h-4" />
+                  )}
+                </button>
+              </div>
+            </div>
+          </div>
+        ))}
+      </div>
+
+      {selectedProduct && (
+        <CheckoutModal
+          product={selectedProduct}
+          onClose={() => setSelectedProduct(null)}
+        />
+      )}
+    </div>
+  );
+};
