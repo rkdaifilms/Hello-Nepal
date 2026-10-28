@@ -1,15 +1,9 @@
 import React, { useState } from 'react';
-import { GoogleGenAI } from '@google/genai';
 import { CONFIG } from '../config/env';
 import { Send, Bot, User, Loader2, Sparkles } from 'lucide-react';
 
-interface Message {
-  role: 'user' | 'model';
-  text: string;
-}
-
 export const SupportChatbot: React.FC = () => {
-  const [messages, setMessages] = useState<Message[]>([
+  const [messages, setMessages] = useState<any[]>([
     { role: 'model', text: 'नमस्ते! मैं Hello Nepal का एआई सपोर्ट असिस्टेंट हूँ। बताइए, आज मैं आपकी क्या मदद कर सकता हूँ?' }
   ]);
   const [input, setInput] = useState('');
@@ -29,7 +23,6 @@ export const SupportChatbot: React.FC = () => {
       let replyText = '';
 
       if (useOpenRouter) {
-        // OpenRouter / OpenAI API का इस्तेमाल
         const res = await fetch('https://openrouter.ai/api/v1/chat/completions', {
           method: 'POST',
           headers: {
@@ -41,7 +34,7 @@ export const SupportChatbot: React.FC = () => {
           body: JSON.stringify({
             model: 'openai/gpt-4o-mini',
             messages: [
-              { role: 'system', content: 'You are an advanced AI helper integrated into Hello Nepal app. Answer user queries accurately and professionally.' },
+              { role: 'system', content: 'You are an advanced AI helper integrated into Hello Nepal app.' },
               { role: 'user', content: userMessage }
             ]
           })
@@ -49,19 +42,23 @@ export const SupportChatbot: React.FC = () => {
         const data = await res.json();
         replyText = data.choices?.[0]?.message?.content || 'OpenRouter से कोई उत्तर नहीं मिला।';
       } else {
-        // Gemini API का इस्तेमाल
-        const ai = new GoogleGenAI({ apiKey: CONFIG.geminiApiKey });
-        const response = await ai.models.generateContent({
-          model: 'gemini-2.5-flash',
-          contents: userMessage,
+        const res = await fetch(`https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-flash:generateContent?key=${CONFIG.geminiApiKey}`, {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+          },
+          body: JSON.stringify({
+            contents: [{ parts: [{ text: userMessage }] }]
+          })
         });
-        replyText = response.text || 'माफ़ करना, अभी जवाब देने में कुछ समस्या आ रही है।';
+        const data = await res.json();
+        replyText = data.candidates?.[0]?.content?.parts?.[0]?.text || 'माफ़ करना, अभी जवाब देने में कुछ समस्या आ रही है।';
       }
 
       setMessages(prev => [...prev, { role: 'model', text: replyText }]);
     } catch (error) {
       console.error("AI Chat Error:", error);
-      setMessages(prev => [...prev, { role: 'model', text: 'नेटवर्क या API की में कुछ दिक्कत है, कृपया दोबारा कोशिश करें।' }]);
+      setMessages(prev => [...prev, { role: 'model', text: 'नेटवर्क में कुछ दिक्कत है, कृपया दोबारा कोशिश करें।' }]);
     } finally {
       setLoading(false);
     }
@@ -85,7 +82,7 @@ export const SupportChatbot: React.FC = () => {
             }`}
           >
             <Sparkles className="w-3 h-3" />
-            {useOpenRouter ? 'Mode: OpenAI / OpenRouter' : 'Mode: Gemini AI'}
+            {useOpenRouter ? 'Mode: OpenAI' : 'Mode: Gemini AI'}
           </button>
         </div>
 
@@ -122,7 +119,7 @@ export const SupportChatbot: React.FC = () => {
         <form onSubmit={handleSend} className="p-3 border-t border-zinc-200 dark:border-zinc-800 flex items-center gap-2 bg-white dark:bg-zinc-900">
           <input
             type="text"
-            placeholder={useOpenRouter ? "OpenRouter से कुछ पूछें..." : "Gemini से कुछ पूछें..."}
+            placeholder={useOpenRouter ? "OpenAI से कुछ पूछें..." : "Gemini से कुछ पूछें..."}
             value={input}
             onChange={(e) => setInput(e.target.value)}
             className="flex-1 px-3 py-2 text-xs border border-zinc-200 dark:border-zinc-700 rounded-xl bg-transparent text-zinc-900 dark:text-zinc-100 focus:outline-none focus:border-red-600"
