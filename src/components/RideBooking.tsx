@@ -3,7 +3,6 @@ import { MapPin, Bike, Car, Shield, ArrowRight, CheckCircle2, Sparkles } from 'l
 import mapboxgl from 'mapbox-gl';
 import 'mapbox-gl/dist/mapbox-gl.css';
 
-// आपका असली Mapbox Public Access Token
 mapboxgl.accessToken = 'pk.eyJ1IjoicmtkYWlmaWxtcyIsImEiOiJjbXZveDdtOHUweGIyMnpxeGtxemJjODV5In0.2BCQn8iiApvGhcXV-ez8Vg';
 
 export const RideBooking: React.FC = () => {
@@ -29,21 +28,18 @@ export const RideBooking: React.FC = () => {
 
   const currentRide = rides[selectedVehicle];
 
-  // Mapbox Initialization with proper cleanup & container fix
   useEffect(() => {
     if (!mapContainerRef.current) return;
 
-    // अगर पहले से कोई मैप बना है तो उसे हटाकर साफ करें
     if (mapInstanceRef.current) {
       mapInstanceRef.current.remove();
       mapInstanceRef.current = null;
     }
 
-    // नया मैप इंस्टेंस बनाएँ
     const map = new mapboxgl.Map({
       container: mapContainerRef.current,
       style: 'mapbox://styles/mapbox/streets-v12',
-      center: [83.4500, 27.5250], // भैरहवा और लुंबिनी का सेंटर
+      center: [83.4500, 27.5250],
       zoom: 11
     });
 
@@ -53,10 +49,10 @@ export const RideBooking: React.FC = () => {
       map.resize();
 
       const routeCoordinates: [number, number][] = [
-        [83.4281, 27.5042], // भैरहवा
+        [83.4281, 27.5042],
         [83.4400, 27.5300], 
         [83.4700, 27.5800], 
-        [83.4770, 27.6476]  // लुंबिनी
+        [83.4770, 27.6476]
       ];
 
       if (!map.getSource('route')) {
@@ -88,19 +84,23 @@ export const RideBooking: React.FC = () => {
         });
       }
 
-      // पिकअप मार्कर (हरा)
       new mapboxgl.Marker({ color: '#10b981' })
         .setLngLat([83.4281, 27.5042])
         .addTo(map);
 
-      // ड्रॉपऑफ़ मार्कर (लाल)
       new mapboxgl.Marker({ color: '#ef4444' })
         .setLngLat([83.4770, 27.6476])
         .addTo(map);
     });
 
-    // Cleanup when component unmounts
+    const timer = setTimeout(() => {
+      if (mapInstanceRef.current) {
+        mapInstanceRef.current.resize();
+      }
+    }, 300);
+
     return () => {
+      clearTimeout(timer);
       if (mapInstanceRef.current) {
         mapInstanceRef.current.remove();
         mapInstanceRef.current = null;
@@ -140,7 +140,6 @@ export const RideBooking: React.FC = () => {
         <p className="text-xs text-white/80">{pickup} ➔ {dropoff} लाइव Mapbox जीपीएस</p>
       </div>
 
-      {/* Mapbox Container - पक्की फिक्स हाइट ताकि ब्लैक बॉक्स न आए */}
       <div className="relative w-full rounded-3xl overflow-hidden shadow-2xl border-2 border-red-500/40 bg-gray-200" style={{ height: '340px' }}>
         <div ref={mapContainerRef} className="absolute inset-0 w-full h-full" style={{ width: '100%', height: '100%' }} />
         <div className="absolute bottom-3 left-3 bg-black/80 px-3 py-1.5 rounded-xl text-[11px] text-white font-bold z-10 shadow border border-white/10 flex items-center gap-1.5 backdrop-blur-md pointer-events-none">
@@ -290,4 +289,4 @@ export const RideBooking: React.FC = () => {
   );
 };
 
-export default RideBooking;
+export default RideBooking;              
