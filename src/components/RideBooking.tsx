@@ -120,14 +120,14 @@ export const RideBooking: React.FC = () => {
   };
 
   return (
-    <div className="space-y-4 pb-12 max-w-md mx-auto">
+    <div className="space-y-4 pb-20 max-w-md mx-auto px-2">
       <div className="bg-gradient-to-r from-red-600 to-orange-600 text-white p-5 rounded-3xl shadow-xl">
         <h1 className="text-xl font-bold">Hello Nepal राइड्स</h1>
         <p className="text-xs text-white/80">{pickup} - {dropoff} 3D लाइव नेविगेशन</p>
       </div>
 
       {/* Mapbox Container - 3D Map */}
-      <div className="relative w-full rounded-3xl overflow-hidden shadow-xl border-2 border-red-500/30 bg-zinc-900" style={{ height: '300px' }}>
+      <div className="relative w-full rounded-3xl overflow-hidden shadow-xl border-2 border-red-500/30 bg-zinc-900" style={{ height: '280px' }}>
         <div ref={mapContainer} style={{ width: '100%', height: '100%', position: 'absolute', top: 0, left: 0 }} />
         <div className="absolute bottom-3 left-3 bg-black/80 px-3 py-1.5 rounded-xl text-[11px] text-white font-bold z-10 shadow border border-white/10 flex items-center gap-1.5">
           📍 लाइव रूट: {pickup} ➔ {dropoff}
@@ -141,14 +141,14 @@ export const RideBooking: React.FC = () => {
       )}
 
       {/* Booking Form Card */}
-      <div className="bg-white rounded-3xl p-5 shadow-xl border border-gray-100 space-y-4">
+      <div className="bg-white rounded-3xl p-5 shadow-xl border border-gray-100 space-y-4 mb-10">
         <div className="space-y-2.5">
           <div className="flex items-center space-x-3 bg-gray-50 p-3 rounded-2xl border border-gray-200">
             <div className="w-7 h-7 rounded-xl bg-emerald-500/10 text-emerald-600 flex items-center justify-center flex-shrink-0">
               <MapPin className="w-4 h-4" />
             </div>
             <div className="flex-grow">
-              <p className="text-[10px] uppercase tracking-wider font-bold text-gray-400">पिकअप लोकेशन</p>
+              <p className="text-[10px] uppercase tracking-wider font-bold text-gray-400">पिकअप लोकेशन (जहाँ से जाना है)</p>
               <input 
                 type="text" 
                 value={pickup} 
@@ -163,7 +163,7 @@ export const RideBooking: React.FC = () => {
               <MapPin className="w-4 h-4" />
             </div>
             <div className="flex-grow">
-              <p className="text-[10px] uppercase tracking-wider font-bold text-gray-400">ड्रॉप लोकेशन</p>
+              <p className="text-[10px] uppercase tracking-wider font-bold text-gray-400">ड्रॉप लोकेशन (जहाँ तक जाना है)</p>
               <input 
                 type="text" 
                 value={dropoff} 
