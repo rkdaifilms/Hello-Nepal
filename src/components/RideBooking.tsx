@@ -3,7 +3,8 @@ import { MapPin, Bike, Car, Shield, ArrowRight, CheckCircle2, Sparkles } from 'l
 import mapboxgl from 'mapbox-gl';
 import 'mapbox-gl/dist/mapbox-gl.css';
 
-mapboxgl.accessToken = 'pk.eyJ1IjoicmtkYWlmaWxtcyIsImEiOiJjbDc2...';
+// आपका असली Mapbox Public Access Token
+mapboxgl.accessToken = 'pk.eyJ1IjoicmtkYWlmaWxtcyIsImEiOiJjbXZveDdtOHUweGIyMnpxeGtxemJjODV5In0.2BCQn8iiApvGhcXV-ez8Vg';
 
 export const RideBooking: React.FC = () => {
   const [pickup, setPickup] = useState('भैरहवा (Bhairahawa)');
@@ -28,6 +29,7 @@ export const RideBooking: React.FC = () => {
 
   const currentRide = rides[selectedVehicle];
 
+  // Mapbox 3D GPS Map & Live Route Rendering
   useEffect(() => {
     if (!mapContainer.current) return;
 
@@ -72,7 +74,7 @@ export const RideBooking: React.FC = () => {
           paint: {
             'line-color': '#ef4444',
             'line-width': 6,
-            'line-opacity': 0.85
+            'line-opacity': 0.9
           }
         });
 
@@ -120,17 +122,17 @@ export const RideBooking: React.FC = () => {
   };
 
   return (
-    <div className="space-y-4 pb-20 max-w-md mx-auto px-2">
+    <div className="space-y-4 pb-24 max-w-md mx-auto px-2">
       <div className="bg-gradient-to-r from-red-600 to-orange-600 text-white p-5 rounded-3xl shadow-xl">
         <h1 className="text-xl font-bold">Hello Nepal राइड्स</h1>
-        <p className="text-xs text-white/80">{pickup} - {dropoff} 3D लाइव नेविगेशन</p>
+        <p className="text-xs text-white/80">{pickup} ➔ {dropoff} GPS 3D नेविगेशन</p>
       </div>
 
-      {/* Mapbox Container - 3D Map */}
-      <div className="relative w-full rounded-3xl overflow-hidden shadow-xl border-2 border-red-500/30 bg-zinc-900" style={{ height: '280px' }}>
+      {/* Mapbox 3D Container */}
+      <div className="relative w-full rounded-3xl overflow-hidden shadow-xl border-2 border-red-500/30 bg-zinc-900" style={{ height: '300px' }}>
         <div ref={mapContainer} style={{ width: '100%', height: '100%', position: 'absolute', top: 0, left: 0 }} />
         <div className="absolute bottom-3 left-3 bg-black/80 px-3 py-1.5 rounded-xl text-[11px] text-white font-bold z-10 shadow border border-white/10 flex items-center gap-1.5">
-          📍 लाइव रूट: {pickup} ➔ {dropoff}
+          📍 लाइव GPS रूट: {pickup} ➔ {dropoff}
         </div>
       </div>
 
@@ -141,7 +143,7 @@ export const RideBooking: React.FC = () => {
       )}
 
       {/* Booking Form Card */}
-      <div className="bg-white rounded-3xl p-5 shadow-xl border border-gray-100 space-y-4 mb-10">
+      <div className="bg-white rounded-3xl p-5 shadow-xl border border-gray-100 space-y-4">
         <div className="space-y-2.5">
           <div className="flex items-center space-x-3 bg-gray-50 p-3 rounded-2xl border border-gray-200">
             <div className="w-7 h-7 rounded-xl bg-emerald-500/10 text-emerald-600 flex items-center justify-center flex-shrink-0">
@@ -222,7 +224,7 @@ export const RideBooking: React.FC = () => {
             <button
               type="button"
               onClick={handleBookRide}
-              className="w-full py-3.5 bg-red-600 hover:bg-red-700 text-white rounded-2xl font-black text-sm shadow-lg flex items-center justify-center gap-2"
+              className="w-full py-3.5 bg-red-600 hover:bg-red-700 text-white rounded-2xl font-black text-sm shadow-lg flex items-center justify-center gap-2 cursor-pointer"
             >
               तुरंत {currentRide.name} बुक करें <ArrowRight className="w-4 h-4" />
             </button>
