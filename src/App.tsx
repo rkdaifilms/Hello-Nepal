@@ -5,7 +5,7 @@ import AboutHelloNepal from './components/AboutHelloNepal';
 import { RideBooking } from './components/RideBooking';
 import { Marketplace } from './components/Marketplace';
 import DriverKYC from './components/DriverKYC';
-import SupportChatbot from './components/SupportChatbot';
+import { SupportChatbot } from './components/SupportChatbot';
 import AdminDashboard from './components/AdminDashboard';
 import { Profile } from './components/Profile';
 
