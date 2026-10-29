@@ -1,4 +1,4 @@
-  import React, { useState, useEffect, useRef } from 'react';
+   import React, { useState, useEffect, useRef } from 'react';
 import { MapPin, Bike, Car, Shield, ArrowRight, CheckCircle2, Sparkles } from 'lucide-react';
 import mapboxgl from 'mapbox-gl';
 import 'mapbox-gl/dist/mapbox-gl.css';
@@ -18,8 +18,8 @@ export const RideBooking: React.FC = () => {
   const [aiWarningMessage, setAiWarningMessage] = useState('');
   const [isWrongTurn, setIsWrongTurn] = useState(false);
 
-  const mapContainer = useRef<HTMLDivElement>(null);
-  const map = useRef<mapboxgl.Map | null>(null);
+  const mapContainerRef = useRef<HTMLDivElement>(null);
+  const mapInstanceRef = useRef<mapboxgl.Map | null>(null);
 
   const rides = {
     bike: { name: 'Hello Bike', price: 450, time: '25 मिनट' },
@@ -29,23 +29,23 @@ export const RideBooking: React.FC = () => {
 
   const currentRide = rides[selectedVehicle];
 
-  // Mapbox 3D GPS Map Initialization with proper container sizing
+  // Mapbox Initialization with proper mobile sizing and container fix
   useEffect(() => {
-    if (!mapContainer.current) return;
+    if (!mapContainerRef.current) return;
 
-    if (!map.current) {
-      map.current = new mapboxgl.Map({
-        container: mapContainer.current,
-        style: 'mapbox://styles/mapbox/streets-v12', // साफ-सुथरा स्टैंडर्ड स्ट्रीट मैप स्टाइल
+    if (!mapInstanceRef.current) {
+      mapInstanceRef.current = new mapboxgl.Map({
+        container: mapContainerRef.current,
+        style: 'mapbox://styles/mapbox/streets-v12',
         center: [83.4500, 27.5250], // भैरहवा और लुंबिनी का सेंटर
-        zoom: 11
+        zoom: 10.5
       });
 
-      map.current.on('load', () => {
-        if (!map.current) return;
+      mapInstanceRef.current.on('load', () => {
+        if (!mapInstanceRef.current) return;
 
-        // मैप साइज को रिफ्रेश करने के लिए ताकि काली स्क्रीन न आए
-        map.current.resize();
+        // स्क्रीन साइज रिफ्रेश ताकि काली स्क्रीन न आए
+        mapInstanceRef.current.resize();
 
         // भैरहवा से लुंबिनी का रूट कोऑर्डिनेट्स
         const routeCoordinates: [number, number][] = [
@@ -55,53 +55,55 @@ export const RideBooking: React.FC = () => {
           [83.4770, 27.6476]  // लुंबिनी
         ];
 
-        map.current.addSource('route', {
-          type: 'geojson',
-          data: {
-            type: 'Feature',
-            properties: {},
-            geometry: {
-              type: 'LineString',
-              coordinates: routeCoordinates
+        if (!mapInstanceRef.current.getSource('route')) {
+          mapInstanceRef.current.addSource('route', {
+            type: 'geojson',
+            data: {
+              type: 'Feature',
+              properties: {},
+              geometry: {
+                type: 'LineString',
+                coordinates: routeCoordinates
+              }
             }
-          }
-        });
+          });
 
-        map.current.addLayer({
-          id: 'route',
-          type: 'line',
-          source: 'route',
-          layout: {
-            'line-join': 'round',
-            'line-cap': 'round'
-          },
-          paint: {
-            'line-color': '#ef4444',
-            'line-width': 5,
-            'line-opacity': 0.85
-          }
-        });
+          mapInstanceRef.current.addLayer({
+            id: 'route',
+            type: 'line',
+            source: 'route',
+            layout: {
+              'line-join': 'round',
+              'line-cap': 'round'
+            },
+            paint: {
+              'line-color': '#ef4444',
+              'line-width': 6,
+              'line-opacity': 0.85
+            }
+          });
+        }
 
-        // पिकअप मार्कर
+        // पिकअप मार्कर (हरा)
         new mapboxgl.Marker({ color: '#10b981' })
           .setLngLat([83.4281, 27.5042])
-          .addTo(map.current);
+          .addTo(mapInstanceRef.current);
 
-        // ड्रॉपऑफ़ मार्कर
+        // ड्रॉपऑफ़ मार्कर (लाल)
         new mapboxgl.Marker({ color: '#ef4444' })
           .setLngLat([83.4770, 27.6476])
-          .addTo(map.current);
+          .addTo(mapInstanceRef.current);
       });
     }
 
-    // मोबाइल स्क्रीन रोटेशन या साइज बदलने पर मैप को एडजस्ट करना
-    const timer = setTimeout(() => {
-      if (map.current) {
-        map.current.resize();
+    // बार-बार रिसाइज ट्रिगर ताकि मोबाइल ब्राउज़र में कैनवास कभी काला न पड़े
+    const resizeTimer = setTimeout(() => {
+      if (mapInstanceRef.current) {
+        mapInstanceRef.current.resize();
       }
-    }, 300);
+    }, 250);
 
-    return () => clearTimeout(timer);
+    return () => clearTimeout(resizeTimer);
   }, []);
 
   const runSmartAIRouteCheck = () => {
@@ -133,13 +135,13 @@ export const RideBooking: React.FC = () => {
     <div className="space-y-4 pb-24 max-w-md mx-auto px-2">
       <div className="bg-gradient-to-r from-red-600 to-orange-600 text-white p-5 rounded-3xl shadow-xl">
         <h1 className="text-xl font-bold">Hello Nepal राइड्स</h1>
-        <p className="text-xs text-white/80">{pickup} ➔ {dropoff} लाइव Mapbox GPS</p>
+        <p className="text-xs text-white/80">{pickup} ➔ {dropoff} लाइव Mapbox जीपीएस</p>
       </div>
 
-      {/* Mapbox Container with Explicit Height & Relative Positioning */}
-      <div className="relative w-full rounded-3xl overflow-hidden shadow-2xl border-2 border-red-500/40 bg-zinc-900" style={{ height: '300px', minHeight: '300px' }}>
-        <div ref={mapContainer} style={{ width: '100%', height: '100%', position: 'absolute', top: 0, left: 0 }} />
-        <div className="absolute bottom-3 left-3 bg-black/80 px-3 py-1.5 rounded-xl text-[11px] text-white font-bold z-10 shadow border border-white/10 flex items-center gap-1.5 backdrop-blur-md">
+      {/* Mapbox Container - फिक्स साइज और स्टाइल ताकि काली स्क्रीन कभी न आए */}
+      <div className="relative w-full rounded-3xl overflow-hidden shadow-2xl border-2 border-red-500/40 bg-gray-100" style={{ height: '320px', minHeight: '320px' }}>
+        <div ref={mapContainerRef} className="w-full h-full absolute inset-0" style={{ width: '100%', height: '100%' }} />
+        <div className="absolute bottom-3 left-3 bg-black/80 px-3 py-1.5 rounded-xl text-[11px] text-white font-bold z-10 shadow border border-white/10 flex items-center gap-1.5 backdrop-blur-md pointer-events-none">
           📍 लाइव रूट: {pickup} से {dropoff}
         </div>
       </div>
@@ -286,4 +288,4 @@ export const RideBooking: React.FC = () => {
   );
 };
 
-export default RideBooking;   
+export default RideBooking;        
