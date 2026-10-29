@@ -1,5 +1,4 @@
 import React, { useState } from 'react';
-import mapboxgl from 'mapbox-gl';
 import GeneralInfo from './components/GeneralInfo';
 import FAQ from './components/FAQ';
 import AboutHelloNepal from './components/AboutHelloNepal';
@@ -9,9 +8,6 @@ import DriverKYC from './components/DriverKYC';
 import { SupportChatbot } from './components/SupportChatbot';
 import AdminDashboard from './components/AdminDashboard';
 import { Profile } from './components/Profile';
-
-// === ऐप के मेन फाइल में मैपबॉक्स का पक्का टोकन सेट कर दिया है ताकि काला डिब्बा हट जाए ===
-mapboxgl.accessToken = 'pk.eyJ1IjoiY2FsbHByaXlhbmNlIiwiYSI6ImI0YXZlRGR0T0hVd2VHbHlNbnB4R3hlbWpKb0RWMWxOMi5CQ1FuOGlpQXB2R2hDWC1lezhWZw==';
 
 export const App: React.FC = () => {
   const [tab, setTab] = useState<'ride' | 'market' | 'kyc' | 'admin' | 'info' | 'profile'>('ride');
@@ -77,4 +73,4 @@ export const App: React.FC = () => {
   );
 };
 
-export default App;
+export default App;          
