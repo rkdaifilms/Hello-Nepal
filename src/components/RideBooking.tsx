@@ -1,11 +1,7 @@
-import React, { useState, useEffect, useRef } from 'react';
-import mapboxgl from 'mapbox-gl';
-import { CONFIG } from '../config/env';
+import React, { useState } from 'react';
+import { MapContainer, TileLayer, Marker, Popup } from 'react-leaflet';
 import { ArrowRight, CheckCircle2, Sparkles, Navigation } from 'lucide-react';
-import 'mapbox-gl/dist/mapbox-gl.css';
-
-// मैपबॉक्स का टोकन यहाँ सीधे सेट कर दिया है ताकि काला डिब्बा हट जाए
-mapboxgl.accessToken = CONFIG.mapboxToken;
+import 'leaflet/dist/leaflet.css';
 
 export const RideBooking: React.FC = () => {
   const [currentRide, setCurrentRide] = useState({ name: 'Hello Nepal Bike', rate: 25 });
@@ -14,28 +10,8 @@ export const RideBooking: React.FC = () => {
   const [bookingStatus, setBookingStatus] = useState<'idle' | 'searching' | 'confirmed'>('idle');
   const [isCheckingAI, setIsCheckingAI] = useState(false);
 
-  const mapContainer = useRef<HTMLDivElement>(null);
-  const map = useRef<mapboxgl.Map | null>(null);
-
-  useEffect(() => {
-    if (map.current) return; // अगर मैप पहले से है तो दोबारा लोड न हो
-
-    if (mapContainer.current) {
-      map.current = new mapboxgl.Map({
-        container: mapContainer.current,
-        style: 'mapbox://styles/mapbox/streets-v12',
-        center: [83.4556, 27.5015], // भैरहवा, नेपाल
-        zoom: 13.5,
-      });
-
-      // GPS मार्कर जोड़ना
-      new mapboxgl.Marker({ color: '#dc2626' })
-        .setLngLat([83.4556, 27.5015])
-        .addTo(map.current);
-
-      map.current.addControl(new mapboxgl.NavigationControl(), 'top-right');
-    }
-  }, []);
+  // भैरहवा, नेपाल के कोऑर्डिनेट्स
+  const position: [number, number] = [27.5015, 83.4556];
 
   const handleBookRide = () => {
     setBookingStatus('searching');
@@ -53,10 +29,26 @@ export const RideBooking: React.FC = () => {
 
   return (
     <div className="space-y-4 bg-white p-4 rounded-3xl shadow-md border border-gray-100">
-      {/* Map View Section */}
-      <div className="relative w-full h-[280px] rounded-2xl overflow-hidden shadow-inner border border-gray-200">
-        <div ref={mapContainer} className="absolute inset-0 w-full h-full" />
-        <div className="absolute top-3 left-3 bg-white/90 backdrop-blur px-3 py-1.5 rounded-xl shadow text-xs font-bold text-gray-700 flex items-center gap-1.5">
+      {/* Map View Section (Leaflet - No Token Required) */}
+      <div className="relative w-full h-[280px] rounded-2xl overflow-hidden shadow-inner border border-gray-200 z-0">
+        <MapContainer 
+          center={position} 
+          zoom={14} 
+          scrollWheelZoom={false} 
+          style={{ width: '100%', height: '100%' }}
+        >
+          <TileLayer
+            attribution='&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors'
+            url="https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png"
+          />
+          <Marker position={position}>
+            <Popup>
+              भैरहवा, लुंबिनी - आपकी लाइव लोकेशन 🛵
+            </Popup>
+          </Marker>
+        </MapContainer>
+        
+        <div className="absolute top-3 left-3 bg-white/90 backdrop-blur px-3 py-1.5 rounded-xl shadow text-xs font-bold text-gray-700 flex items-center gap-1.5 z-[1000]">
           <Navigation className="w-3.5 h-3.5 text-red-600 animate-pulse" /> भैरहवा, लुंबिनी लाइव GPS
         </div>
       </div>
@@ -66,7 +58,7 @@ export const RideBooking: React.FC = () => {
         <button
           type="button"
           onClick={() => { setCurrentRide({ name: 'Hello Nepal Bike', rate: 25 }); setCalculatedFare(115); }}
-          className={`p-3 rounded-2xl border text-left transition-all ${currentRide.name === 'Hello Nepal Bike' ? 'border-red-600 bg-red-50/50 shadow-sm' : 'border-gray-200'}`}
+          className={`p-3 rounded-2xl border text-left transition-all cursor-pointer ${currentRide.name === 'Hello Nepal Bike' ? 'border-red-600 bg-red-50/50 shadow-sm' : 'border-gray-200'}`}
         >
           <div className="font-black text-xs text-gray-800">🛵 Hello Nepal Bike</div>
           <div className="text-[10px] text-gray-500 mt-0.5">तेज़ और किफायती</div>
@@ -74,7 +66,7 @@ export const RideBooking: React.FC = () => {
         <button
           type="button"
           onClick={() => { setCurrentRide({ name: 'Hello Nepal Auto', rate: 40 }); setCalculatedFare(180); }}
-          className={`p-3 rounded-2xl border text-left transition-all ${currentRide.name === 'Hello Nepal Auto' ? 'border-red-600 bg-red-50/50 shadow-sm' : 'border-gray-200'}`}
+          className={`p-3 rounded-2xl border text-left transition-all cursor-pointer ${currentRide.name === 'Hello Nepal Auto' ? 'border-red-600 bg-red-50/50 shadow-sm' : 'border-gray-200'}`}
         >
           <div className="font-black text-xs text-gray-800">🛺 Hello Nepal Auto</div>
           <div className="text-[10px] text-gray-500 mt-0.5">परिवार के लिए सुरक्षित</div>
