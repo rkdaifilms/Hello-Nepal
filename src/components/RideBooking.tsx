@@ -1,19 +1,37 @@
-import React, { useState } from 'react';
-import { MapContainer, TileLayer, Marker, Popup } from 'react-leaflet';
+
+        import React, { useState } from 'react';
+import { MapContainer, TileLayer, Marker, Popup, useMap } from 'react-leaflet';
 import { ArrowRight, CheckCircle2, Sparkles, Navigation, MapPin } from 'lucide-react';
 import 'leaflet/dist/leaflet.css';
 
+// मैप को नई लोकेशन पर ले जाने वाला कंपोनेंट
+const MapUpdater: React.FC<{ center: [number, number] }> = ({ center }) => {
+  const map = useMap();
+  map.setView(center, 14);
+  return null;
+};
+
 export const RideBooking: React.FC = () => {
-  const [pickup, setPickup] = useState('भैरहवा (Bhairahawa)');
-  const [dropoff, setDropoff] = useState('बुटवल (Butwal)');
+  const [pickup, setPickup] = useState('Hatibangai');
+  const [dropoff, setDropoff] = useState('बुटवल Bhairahawa');
   const [currentRide, setCurrentRide] = useState({ name: 'Hello Nepal Bike', rate: 25 });
-  const [distance, setDistance] = useState(22.5); // किमी (भैरहवा से बुटवल)
+  const [distance, setDistance] = useState(22.5);
   const [calculatedFare, setCalculatedFare] = useState(550);
   const [bookingStatus, setBookingStatus] = useState<'idle' | 'searching' | 'confirmed'>('idle');
   const [isCheckingAI, setIsCheckingAI] = useState(false);
 
-  // भैरहवा, नेपाल के कोऑर्डिनेट्स
-  const position: [number, number] = [27.5015, 83.4556];
+  // अलग-अलग जगहों के हिसाब से कोऑर्डिनेट्स (भैरहवा, बुटवल, हाटीबनगाई)
+  const getLocationCoords = (place: string): [number, number] => {
+    const lower = place.toLowerCase();
+    if (lower.includes('बुटवल') || lower.includes('butwal')) {
+      return [27.7000, 83.4167]; // बुटवल कोऑर्डिनेट्स
+    } else if (lower.includes('हाटी') || lower.includes('hati')) {
+      return [27.5300, 83.4400]; // हाटीबनगाई के आसपास के कोऑर्डिनेट्स
+    }
+    return [27.5015, 83.4556]; // डिफ़ॉल्ट भैरहवा
+  };
+
+  const currentPosition = getLocationCoords(pickup);
 
   const handleBookRide = () => {
     setBookingStatus('searching');
@@ -31,7 +49,7 @@ export const RideBooking: React.FC = () => {
 
   return (
     <div className="space-y-4 bg-white p-4 rounded-3xl shadow-md border border-gray-100">
-      {/* Location Input Section (कहाँ से और कहाँ जाना है) */}
+      {/* Location Input Section */}
       <div className="space-y-2 bg-gray-50 p-3 rounded-2xl border border-gray-200">
         <div className="flex items-center gap-2 bg-white px-3 py-2 rounded-xl border border-gray-200 shadow-sm">
           <MapPin className="w-4 h-4 text-emerald-600 flex-shrink-0" />
@@ -39,7 +57,7 @@ export const RideBooking: React.FC = () => {
             type="text"
             value={pickup}
             onChange={(e) => setPickup(e.target.value)}
-            placeholder="कहाँ से जाना है? (जैसे: भैरहवा)"
+            placeholder="कहाँ से जाना है? (जैसे: Hatibangai, Bhairahawa)"
             className="w-full text-xs font-bold text-gray-800 bg-transparent outline-none"
           />
         </div>
@@ -49,17 +67,17 @@ export const RideBooking: React.FC = () => {
             type="text"
             value={dropoff}
             onChange={(e) => setDropoff(e.target.value)}
-            placeholder="कहाँ जाना है? (जैसे: बुटवल, काठमांडू)"
+            placeholder="कहाँ जाना है? (जैसे: Butwal)"
             className="w-full text-xs font-bold text-gray-800 bg-transparent outline-none"
           />
         </div>
       </div>
 
-      {/* Map View Section (Leaflet) */}
+      {/* Map View Section with Auto-Updater */}
       <div className="relative w-full h-[240px] rounded-2xl overflow-hidden shadow-inner border border-gray-200 z-0">
         <MapContainer 
-          center={position} 
-          zoom={13} 
+          center={currentPosition} 
+          zoom={14} 
           scrollWheelZoom={false} 
           style={{ width: '100%', height: '100%' }}
         >
@@ -67,7 +85,8 @@ export const RideBooking: React.FC = () => {
             attribution='&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors'
             url="https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png"
           />
-          <Marker position={position}>
+          <MapUpdater center={currentPosition} />
+          <Marker position={currentPosition}>
             <Popup>
               {pickup} से {dropoff} 🛵
             </Popup>
@@ -75,7 +94,7 @@ export const RideBooking: React.FC = () => {
         </MapContainer>
         
         <div className="absolute top-3 left-3 bg-white/90 backdrop-blur px-3 py-1.5 rounded-xl shadow text-xs font-bold text-gray-700 flex items-center gap-1.5 z-[1000]">
-          <Navigation className="w-3.5 h-3.5 text-red-600 animate-pulse" /> लाइव जीपीएस रूट
+          <Navigation className="w-3.5 h-3.5 text-red-600 animate-pulse" /> लाइव जीपीएस रूट ({pickup})
         </div>
       </div>
 
