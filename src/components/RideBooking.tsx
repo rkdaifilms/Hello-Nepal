@@ -3,8 +3,7 @@ import { MapPin, Bike, Car, Shield, ArrowRight, CheckCircle2, Sparkles } from 'l
 import mapboxgl from 'mapbox-gl';
 import 'mapbox-gl/dist/mapbox-gl.css';
 
-// Mapbox Token - यदि आपके पास टोकन है तो यहाँ डालें या डिफ़ॉल्ट उपयोग करें
-mapboxgl.accessToken = 'pk.eyJ1IjoicmtkYWlmaWxtcyIsImEiOiJjbDc2...'; // अपना टोकन यहाँ डाल सकते हैं
+mapboxgl.accessToken = 'pk.eyJ1IjoicmtkYWlmaWxtcyIsImEiOiJjbDc2...';
 
 export const RideBooking: React.FC = () => {
   const [pickup, setPickup] = useState('भैरहवा (Bhairahawa)');
@@ -29,30 +28,27 @@ export const RideBooking: React.FC = () => {
 
   const currentRide = rides[selectedVehicle];
 
-  // Mapbox 3D Map Initialization & Route Drawing
   useEffect(() => {
     if (!mapContainer.current) return;
 
     if (!map.current) {
       map.current = new mapboxgl.Map({
         container: mapContainer.current,
-        style: 'mapbox://styles/mapbox/navigation-night-v1', // प्रीमियम 3D नेविगेशन स्टाइल
-        center: [83.4500, 27.5000], // भैरहवा/लुंबिनी कोऑर्डिनेट्स
+        style: 'mapbox://styles/mapbox/navigation-night-v1',
+        center: [83.4500, 27.5000],
         zoom: 11
       });
 
       map.current.on('load', () => {
         if (!map.current) return;
 
-        // भैरहवा से लुंबिनी का सैंपल रूट कोऑर्डिनेट्स
         const routeCoordinates = [
-          [83.4281, 27.5042], // भैरहवा
-          [83.4400, 27.5300], // बीच का रास्ता
-          [83.4700, 27.5800], // आगे की सड़क
-          [83.4770, 27.6476]  // लुंबिनी
+          [83.4281, 27.5042], 
+          [83.4400, 27.5300], 
+          [83.4700, 27.5800], 
+          [83.4770, 27.6476]  
         ];
 
-        // मैप पर रूट लाइन जोड़ने के लिए सोर्स बनाएँ
         map.current.addSource('route', {
           type: 'geojson',
           data: {
@@ -65,7 +61,6 @@ export const RideBooking: React.FC = () => {
           }
         });
 
-        // नीले रंग की खूबसूरत नेविगेशन लाइन जोड़ें
         map.current.addLayer({
           id: 'route',
           type: 'line',
@@ -75,13 +70,12 @@ export const RideBooking: React.FC = () => {
             'line-cap': 'round'
           },
           paint: {
-            'line-color': '#ef4444', // शानदार लाल/नीला शेड
+            'line-color': '#ef4444',
             'line-width': 6,
             'line-opacity': 0.85
           }
         });
 
-        // पिकअप और ड्रॉप पॉइंट पर मार्कर्स जोड़ें
         new mapboxgl.Marker({ color: '#10b981' })
           .setLngLat([83.4281, 27.5042])
           .addTo(map.current);
@@ -129,11 +123,11 @@ export const RideBooking: React.FC = () => {
     <div className="space-y-4 pb-12 max-w-md mx-auto">
       <div className="bg-gradient-to-r from-red-600 to-orange-600 text-white p-5 rounded-3xl shadow-xl">
         <h1 className="text-xl font-bold">Hello Nepal राइड्स</h1>
-        <p className="text-xs text-white/80">भैरहवा - लुंबिनी 3D लाइव नेविगेशन</p>
+        <p className="text-xs text-white/80">{pickup} - {dropoff} 3D लाइव नेविगेशन</p>
       </div>
 
-      {/* Mapbox Container - 3D Map & Route Display */}
-      <div className="relative w-full rounded-3xl overflow-hidden shadow-xl border-2 border-red-500/30 bg-zinc-900" style={{ height: '320px' }}>
+      {/* Mapbox Container - 3D Map */}
+      <div className="relative w-full rounded-3xl overflow-hidden shadow-xl border-2 border-red-500/30 bg-zinc-900" style={{ height: '300px' }}>
         <div ref={mapContainer} style={{ width: '100%', height: '100%', position: 'absolute', top: 0, left: 0 }} />
         <div className="absolute bottom-3 left-3 bg-black/80 px-3 py-1.5 rounded-xl text-[11px] text-white font-bold z-10 shadow border border-white/10 flex items-center gap-1.5">
           📍 लाइव रूट: {pickup} ➔ {dropoff}
