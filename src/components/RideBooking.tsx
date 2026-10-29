@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useRef } from 'react';
+ import React, { useState, useEffect, useRef } from 'react';
 import { MapPin, Bike, Car, Shield, ArrowRight, CheckCircle2, Sparkles } from 'lucide-react';
 import mapboxgl from 'mapbox-gl';
 import 'mapbox-gl/dist/mapbox-gl.css';
@@ -278,4 +278,4 @@ export const RideBooking: React.FC = () => {
   );
 };
 
-export default RideBooking;
+export default RideBooking; 
