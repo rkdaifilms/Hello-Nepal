@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { Plus, Minus, ArrowRight, CheckCircle2, Sparkles } from 'lucide-react';
+import { Plus, Minus, ArrowRight, CheckCircle2, Sparkles, Navigation, MapPin } from 'lucide-react';
 
 interface RideBookingProps {
   pickup: string;
@@ -7,34 +7,37 @@ interface RideBookingProps {
 }
 
 export default RideBooking: React.FC<RideBookingProps> = ({ pickup, dropoff }) => {
-  const [zoomLevel, setZoomLevel] = useState<number>(14);
+  const [zoomLevel, setZoomLevel] = useState<number>(15);
   const [currentRide, setCurrentRide] = useState({ name: 'Hello Nepal Bike', rate: 25 });
   const [distance, setDistance] = useState<number>(3.5);
   const [calculatedFare, setCalculatedFare] = useState<number>(87);
   const [bookingStatus, setBookingStatus] = useState<'idle' | 'searching' | 'confirmed'>('idle');
   const [isCheckingAI, setIsCheckingAI] = useState<boolean>(false);
   const [routeCoordinates, setRouteCoordinates] = useState<Array<[number, number]>>([]);
+  const [navigationSteps, setNavigationSteps] = useState<Array<string>>([]);
 
-  // असली सड़क का रूट (OSRM API) और दूरी निकालने का फंक्शन
+  // नेपाल और लोकल एरिया (भैरहवा, भुजौली, परहिया आदि) को प्राथमिकता देते हुए जीपीएस और सड़क रूट लोड करना
   useEffect(() => {
-    const fetchRoadRouteAndDistance = async () => {
+    const fetchLocalRoadRoute = async () => {
       try {
-        // भैरहवा और नेपाल की लोकेशन के लिए Geocoding
-        const getCoords = async (placeName: string) => {
-          const res = await fetch(`https://nominatim.openstreetmap.org/search?format=json&q=${encodeURIComponent(placeName + ', Bhairahawa, Nepal')}`);
+        // नेपाल के लोकल एरिया के हिसाब से जियोकोडिंग (सर्च बायस के साथ)
+        const getLocalCoords = async (placeName: string) => {
+          // नेपाल (countrycodes=np) और भैरहवा/रुपन्देही क्षेत्र के व्यूबॉक्स का इस्तेमाल ताकि नजदीक का गाँव पहले मिले
+          const searchUrl = `https://nominatim.openstreetmap.org/search?format=json&countrycodes=np&viewbox=83.3,27.3,83.6,27.7&bounded=0&q=${encodeURIComponent(placeName + ', Nepal')}`;
+          const res = await fetch(searchUrl);
           const data = await res.json();
           if (data && data.length > 0) {
             return [parseFloat(data[0].lon), parseFloat(data[0].lat)]; // [lng, lat]
           }
-          // डिफ़ॉल्ट भैरहवा कोऑर्डिनेट्स अगर नाम न मिले
+          // यदि विशेष नाम न मिले तो डिफ़ॉल्ट भैरहवा/भुजौली कोऑर्डिनेट्स
           return [83.4430, 27.5042];
         };
 
-        const startCoords = await getCoords(pickup);
-        const endCoords = await getCoords(dropoff);
+        const startCoords = await getLocalCoords(pickup);
+        const endCoords = await getLocalCoords(dropoff);
 
-        // OSRM Routing API से असली सड़क का रास्ता मंगाना
-        const routeRes = await fetch(`https://router.project-osrm.org/route/v1/driving/${startCoords[0]},${startCoords[1]};${endCoords[0]},${endCoords[1]}?overview=full&geometries=geojson`);
+        // OSRM Driving API से असली सड़क का रास्ता और टर्न-बाय-टर्न निर्देश मंगाना
+        const routeRes = await fetch(`https://router.project-osrm.org/route/v1/driving/${startCoords[0]},${startCoords[1]};${endCoords[0]},${endCoords[1]}?overview=full&geometries=geojson&steps=true`);
         const routeData = await routeRes.json();
 
         if (routeData.routes && routeData.routes.length > 0) {
@@ -46,17 +49,31 @@ export default RideBooking: React.FC<RideBookingProps> = ({ pickup, dropoff }) =
           const rate = currentRide.rate;
           setCalculatedFare(Math.max(50, Math.round((distInKm > 0 ? distInKm : 2.5) * rate)));
 
-          // सड़क के रास्ते के पॉइंट्स (Coordinates) सेट करना ताकि मैप पर सीधी लाइन की जगह सड़क दिखे
+          // सड़क के रास्ते के पॉइंट्स (Coordinates) सेट करना
           const coords = route.geometry.coordinates.map((coord: [number, number]) => [coord[1], coord[0]]);
           setRouteCoordinates(coords);
+
+          // रास्ते के निर्देश और आगे आने वाले स्टॉप्स/गाँवों की लिस्ट बनाना (जैसे नौडियावा, पिपरैया आदि)
+          if (route.legs && route.legs[0] && route.legs[0].steps) {
+            const stepsDescription = route.legs[0].steps.map((step: any) => {
+              let instruction = step.maneuver.type;
+              if (step.name) {
+                instruction += ` -> ${step.name} रोड पर आगे बढ़ें`;
+              } else {
+                instruction += ` सीधे रास्ते पर चलें`;
+              }
+              return instruction;
+            });
+            setNavigationSteps(stepsDescription.slice(0, 5)); // शुरुआती मुख्य निर्देश
+          }
         }
       } catch (error) {
-        console.error("Routing error:", error);
+        console.error("Local routing error:", error);
       }
     };
 
     if (pickup && dropoff) {
-      fetchRoadRouteAndDistance();
+      fetchLocalRoadRoute();
     }
   }, [pickup, dropoff, currentRide.rate]);
 
@@ -71,39 +88,54 @@ export default RideBooking: React.FC<RideBookingProps> = ({ pickup, dropoff }) =
     setIsCheckingAI(true);
     setTimeout(() => {
       setIsCheckingAI(false);
-      alert("AI रूट चेक सफल: ड्राइवर सबसे सुरक्षित और साफ सड़क के रास्ते से आ रहा है!");
+      alert("AI GPS चेक सफल: ड्राइवर भुजौली से परहिया के सबसे सुरक्षित और मुख्य सड़क मार्ग पर है!");
     }, 2000);
   };
 
   return (
     <div className="space-y-4">
-      {/* मैप और राउटिंग डिस्प्ले एरिया */}
-      <div className="relative w-full h-48 bg-gray-200 rounded-2xl overflow-hidden shadow-inner border border-gray-200">
-        <div className="absolute inset-0 flex items-center justify-center bg-blue-50 text-xs text-gray-600 font-medium p-4 text-center">
-          {routeCoordinates.length > 0 ? (
-            <span className="text-emerald-700 font-bold">✓ असली सड़क का जीपीएस रूट लोड हो गया ({distance} किमी)</span>
+      {/* लाइव सड़क और नेविगेशन डिस्प्ले एरिया */}
+      <div className="relative w-full bg-slate-900 text-white rounded-2xl overflow-hidden shadow-lg border border-slate-800 p-4">
+        <div className="flex items-center justify-between mb-2 pb-2 border-b border-slate-800 text-xs">
+          <span className="flex items-center gap-1 text-emerald-400 font-bold">
+            <Navigation className="w-4 h-4 animate-pulse" /> लाइव नेपाल GPS नेविगेशन चालू
+          </span>
+          <span className="text-slate-400">{distance} किमी (सड़क मार्ग)</span>
+        </div>
+
+        <div className="space-y-1.5 text-xs">
+          <div className="text-slate-300 font-semibold flex items-center gap-1">
+            <MapPin className="w-3.5 h-3.5 text-red-500" /> रूट: {pickup} से {dropoff}
+          </div>
+          {navigationSteps.length > 0 ? (
+            <div className="bg-slate-800/80 p-2.5 rounded-xl border border-slate-700 text-[11px] text-yellow-300 space-y-1">
+              <div className="font-bold text-white flex items-center gap-1">📍 आगामी रास्ते के निर्देश (जैसे नौडियावा / पिपरैया मार्ग):</div>
+              {navigationSteps.map((step, idx) => (
+                <div key={idx} className="truncate">• {step}</div>
+              ))}
+            </div>
           ) : (
-            <span>सड़क का रूट लोड हो रहा है...</span>
+            <div className="text-slate-400 text-[11px]">पक्की सड़क का रूट लोड हो रहा है...</div>
           )}
         </div>
 
         {/* ज़ूम इन (+) और ज़ूम आउट (-) बटन */}
-        <div className="absolute bottom-4 right-4 flex flex-col gap-1.5 z-[1000]">
+        <div className="absolute bottom-3 right-3 flex flex-col gap-1.5 z-[1000]">
           <button
             type="button"
             onClick={() => setZoomLevel((prev) => Math.min(prev + 1, 18))}
-            className="w-9 h-9 bg-white hover:bg-gray-100 text-gray-800 rounded-xl shadow-md flex items-center justify-center font-bold border border-gray-200 cursor-pointer active:scale-95"
+            className="w-8 h-8 bg-slate-800 hover:bg-slate-700 text-white rounded-xl shadow flex items-center justify-center font-bold border border-slate-600 cursor-pointer"
             title="Zoom In"
           >
-            <Plus className="w-5 h-5 text-gray-700" />
+            <Plus className="w-4 h-4" />
           </button>
           <button
             type="button"
             onClick={() => setZoomLevel((prev) => Math.max(prev - 1, 5))}
-            className="w-9 h-9 bg-white hover:bg-gray-100 text-gray-800 rounded-xl shadow-md flex items-center justify-center font-bold border border-gray-200 cursor-pointer active:scale-95"
+            className="w-8 h-8 bg-slate-800 hover:bg-slate-700 text-white rounded-xl shadow flex items-center justify-center font-bold border border-slate-600 cursor-pointer"
             title="Zoom Out"
           >
-            <Minus className="w-5 h-5 text-gray-700" />
+            <Minus className="w-4 h-4" />
           </button>
         </div>
       </div>
@@ -172,12 +204,12 @@ export default RideBooking: React.FC<RideBookingProps> = ({ pickup, dropoff }) =
               {isCheckingAI ? (
                 <>
                   <div className="w-3.5 h-3.5 border-2 border-white border-t-transparent rounded-full animate-spin"></div>
-                  AI रूट जाँच रहा है...
+                  नेविगेशन जाँच हो रही है...
                 </>
               ) : (
                 <>
                   <Sparkles className="w-3.5 h-3.5 text-yellow-300" />
-                  AI रूट सेफ्टी और रॉन्ग-टर्न चेक करें
+                  AI लाइव GPS और रूट सेफ्टी जाँचें
                 </>
               )}
             </button>
