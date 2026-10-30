@@ -1,5 +1,4 @@
-import React, { useState } from 'react';
-import { CONFIG } from '../config/env';
+   import React, { useState } from 'react';
 import { Send, Bot, User, Loader2, Sparkles } from 'lucide-react';
 
 export const SupportChatbot: React.FC = () => {
@@ -9,6 +8,10 @@ export const SupportChatbot: React.FC = () => {
   const [input, setInput] = useState('');
   const [loading, setLoading] = useState(false);
   const [useOpenRouter, setUseOpenRouter] = useState(false);
+
+  // सीधे यहाँ अपनी पक्की API Keys सेट कर दी हैं ताकि कभी एरर न आए
+  const GEMINI_API_KEY = "यहाँ_अपनी_जेमिनी_एपीआई_की_डाल_दे"; 
+  const OPENROUTER_API_KEY = "Pk.eyJ1IjoicmtkYWlmaWxtcyIsImEiOiJjbXZveDdtOHUweGIyMnpxeGtxemJjODV5In0"; // या अपनी ओपनरौटर की
 
   const handleSend = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -27,7 +30,7 @@ export const SupportChatbot: React.FC = () => {
           method: 'POST',
           headers: {
             'Content-Type': 'application/json',
-            'Authorization': `Bearer ${CONFIG.openrouterApiKey}`,
+            'Authorization': `Bearer ${OPENROUTER_API_KEY}`,
             'HTTP-Referer': 'https://hellonepal.app',
             'X-Title': 'Hello Nepal'
           },
@@ -42,13 +45,18 @@ export const SupportChatbot: React.FC = () => {
         const data = await res.json();
         replyText = data.choices?.[0]?.message?.content || 'OpenRouter से कोई उत्तर नहीं मिला।';
       } else {
-        const res = await fetch(`https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-flash:generateContent?key=${CONFIG.geminiApiKey}`, {
+        // सीधी और पक्की Gemini 1.5 Flash API कॉल
+        const res = await fetch(`https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-flash:generateContent?key=${GEMINI_API_KEY}`, {
           method: 'POST',
           headers: {
             'Content-Type': 'application/json',
           },
           body: JSON.stringify({
-            contents: [{ parts: [{ text: userMessage }] }]
+            contents: [
+              {
+                parts: [{ text: `You are Hello Nepal AI support assistant. Answer helpfully in Hindi or Nepali context for ride sharing and services: ${userMessage}` }]
+              }
+            ]
           })
         });
         const data = await res.json();
@@ -137,3 +145,5 @@ export const SupportChatbot: React.FC = () => {
     </div>
   );
 };
+
+export default SupportChatbot;       
