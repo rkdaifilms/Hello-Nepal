@@ -1,37 +1,107 @@
-
-        import React, { useState } from 'react';
-import { MapContainer, TileLayer, Marker, Popup, useMap } from 'react-leaflet';
-import { ArrowRight, CheckCircle2, Sparkles, Navigation, MapPin } from 'lucide-react';
+import React, { useState, useEffect } from 'react';
+import { MapContainer, TileLayer, Marker, Popup, useMap, Polyline } from 'react-leaflet';
+import { ArrowRight, CheckCircle2, Sparkles, Navigation, MapPin, Plus, Minus } from 'lucide-react';
 import 'leaflet/dist/leaflet.css';
+import L from 'leaflet';
 
-// मैप को नई लोकेशन पर ले जाने वाला कंपोनेंट
-const MapUpdater: React.FC<{ center: [number, number] }> = ({ center }) => {
+// लीफलेट मार्कर आइकन फिक्स
+import markerIcon from 'leaflet/dist/images/marker-icon.png';
+import markerShadow from 'leaflet/dist/images/marker-shadow.png';
+
+let DefaultIcon = L.icon({
+  iconUrl: markerIcon,
+  shadowUrl: markerShadow,
+  iconSize: [25, 41],
+  iconAnchor: [12, 41]
+});
+L.Marker.prototype.options.icon = DefaultIcon;
+
+// मैप को ऑटो-मूव करने वाला कंट्रोलर
+const MapController: React.FC<{ center: [number, number]; zoom: number }> = ({ center, zoom }) => {
   const map = useMap();
-  map.setView(center, 14);
+  useEffect(() => {
+    map.setView(center, zoom);
+  }, [center, zoom, map]);
   return null;
 };
 
 export const RideBooking: React.FC = () => {
-  const [pickup, setPickup] = useState('Hatibangai');
-  const [dropoff, setDropoff] = useState('बुटवल Bhairahawa');
+  const [pickup, setPickup] = useState('Bhairahawa');
+  const [dropoff, setDropoff] = useState('Butwal');
+  
+  const [pickupCoords, setPickupCoords] = useState<[number, number]>([27.5015, 83.4556]); // भैरहवा
+  const [dropoffCoords, setDropoffCoords] = useState<[number, number]>([27.7000, 83.4167]); // बुटवल
+  const [routeCoords, setRouteCoords] = useState<[number, number][]>([
+    [27.5015, 83.4556],
+    [27.7000, 83.4167]
+  ]);
+
+  const [zoomLevel, setZoomLevel] = useState<number>(12);
   const [currentRide, setCurrentRide] = useState({ name: 'Hello Nepal Bike', rate: 25 });
-  const [distance, setDistance] = useState(22.5);
-  const [calculatedFare, setCalculatedFare] = useState(550);
+  const [distance, setDistance] = useState<number>(22.5);
+  const [calculatedFare, setCalculatedFare] = useState<number>(550);
   const [bookingStatus, setBookingStatus] = useState<'idle' | 'searching' | 'confirmed'>('idle');
   const [isCheckingAI, setIsCheckingAI] = useState(false);
+  const [isSearchingLocation, setIsSearchingLocation] = useState(false);
 
-  // अलग-अलग जगहों के हिसाब से कोऑर्डिनेट्स (भैरहवा, बुटवल, हाटीबनगाई)
-  const getLocationCoords = (place: string): [number, number] => {
-    const lower = place.toLowerCase();
-    if (lower.includes('बुटवल') || lower.includes('butwal')) {
-      return [27.7000, 83.4167]; // बुटवल कोऑर्डिनेट्स
-    } else if (lower.includes('हाटी') || lower.includes('hati')) {
-      return [27.5300, 83.4400]; // हाटीबनगाई के आसपास के कोऑर्डिनेट्स
+  // लाइव जीपीएस लोकेशन सर्च करने का फंक्शन (Nominatim API)
+  const searchLocation = async (query: string, isPickup: boolean) => {
+    if (!query.trim()) return;
+    setIsSearchingLocation(true);
+    try {
+      const response = await fetch(`https://nominatim.openstreetmap.org/search?format=json&q=${encodeURIComponent(query + ', Nepal')}`);
+      const data = await response.json();
+      if (data && data.length > 0) {
+        const lat = parseFloat(data[0].lat);
+        const lon = parseFloat(data[0].lon);
+        const newCoords: [number, number] = [lat, lon];
+
+        if (isPickup) {
+          setPickupCoords(newCoords);
+        } else {
+          setDropoffCoords(newCoords);
+        }
+      }
+    } catch (error) {
+      console.error("Location search failed", error);
+    } finally {
+      setIsSearchingLocation(false);
     }
-    return [27.5015, 83.4556]; // डिफ़ॉल्ट भैरहवा
   };
 
-  const currentPosition = getLocationCoords(pickup);
+  // जैसे ही पिकअप या ड्रॉपऑफ का नाम बदला, ऑटोमैटिक GPS सर्च ट्रिगर होगा
+  useEffect(() => {
+    const timer = setTimeout(() => {
+      searchLocation(pickup, true);
+    }, 700);
+    return () => clearTimeout(timer);
+  }, [pickup]);
+
+  useEffect(() => {
+    const timer = setTimeout(() => {
+      searchLocation(dropoff, false);
+    }, 700);
+    return () => clearTimeout(timer);
+  }, [dropoff]);
+
+  // दूरी और रूट लाइन कैलकुलेट करना
+  useEffect(() => {
+    setRouteCoords([pickupCoords, dropoffCoords]);
+    
+    // दूरी निकालने का फॉर्मूला (Haversine formula)
+    const R = 6371; 
+    const dLat = (dropoffCoords[0] - pickupCoords[0]) * (Math.PI / 180);
+    const dLon = (dropoffCoords[1] - pickupCoords[1]) * (Math.PI / 180);
+    const a =
+      Math.sin(dLat / 2) * Math.sin(dLat / 2) +
+      Math.cos(pickupCoords[0] * (Math.PI / 180)) * Math.cos(dropoffCoords[0] * (Math.PI / 180)) *
+      Math.sin(dLon / 2) * Math.sin(dLon / 2);
+    const c = 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a));
+    const dist = Math.max(2, parseFloat((R * c).toFixed(1)));
+    
+    setDistance(dist);
+    setCalculatedFare(Math.round(dist * currentRide.rate + 100));
+  }, [pickupCoords, dropoffCoords, currentRide]);
 
   const handleBookRide = () => {
     setBookingStatus('searching');
@@ -57,7 +127,7 @@ export const RideBooking: React.FC = () => {
             type="text"
             value={pickup}
             onChange={(e) => setPickup(e.target.value)}
-            placeholder="कहाँ से जाना है? (जैसे: Hatibangai, Bhairahawa)"
+            placeholder="कहाँ से जाना है? (जैसे: Bhairahawa, Hatibangai)"
             className="w-full text-xs font-bold text-gray-800 bg-transparent outline-none"
           />
         </div>
@@ -73,28 +143,59 @@ export const RideBooking: React.FC = () => {
         </div>
       </div>
 
-      {/* Map View Section with Auto-Updater */}
-      <div className="relative w-full h-[240px] rounded-2xl overflow-hidden shadow-inner border border-gray-200 z-0">
+      {/* Map View Section with Live GPS Route & Zoom Buttons */}
+      <div className="relative w-full h-[260px] rounded-2xl overflow-hidden shadow-inner border border-gray-200 z-0">
         <MapContainer 
-          center={currentPosition} 
-          zoom={14} 
-          scrollWheelZoom={false} 
+          center={pickupCoords} 
+          zoom={zoomLevel} 
+          scrollWheelZoom={true} 
+          zoomControl={false}
           style={{ width: '100%', height: '100%' }}
         >
           <TileLayer
             attribution='&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors'
             url="https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png"
           />
-          <MapUpdater center={currentPosition} />
-          <Marker position={currentPosition}>
-            <Popup>
-              {pickup} से {dropoff} 🛵
-            </Popup>
+          <MapController center={pickupCoords} zoom={zoomLevel} />
+          
+          {/* पिकअप मार्कर */}
+          <Marker position={pickupCoords}>
+            <Popup>पिकअप: {pickup}</Popup>
           </Marker>
+
+          {/* ड्रॉपऑफ मार्कर */}
+          <Marker position={dropoffCoords}>
+            <Popup>ड्रॉपऑफ: {dropoff}</Popup>
+          </Marker>
+
+          {/* लाइव रूट पॉलीलाइन (नीला रास्ता) */}
+          <Polyline positions={routeCoords} color="#2563eb" weight={5} opacity={0.7} />
         </MapContainer>
         
-        <div className="absolute top-3 left-3 bg-white/90 backdrop-blur px-3 py-1.5 rounded-xl shadow text-xs font-bold text-gray-700 flex items-center gap-1.5 z-[1000]">
-          <Navigation className="w-3.5 h-3.5 text-red-600 animate-pulse" /> लाइव जीपीएस रूट ({pickup})
+        {/* लाइव जीपीएस स्टेटस बार */}
+        <div className="absolute top-3 left-3 bg-white/95 backdrop-blur px-3 py-1.5 rounded-xl shadow text-xs font-bold text-gray-700 flex items-center gap-1.5 z-[1000]">
+          <Navigation className="w-3.5 h-3.5 text-red-600 animate-pulse" /> 
+          {isSearchingLocation ? 'जीपीएस रूट लोड हो रहा है...' : `रूट: ${pickup} ➔ ${dropoff}`}
+        </div>
+
+        {/* ज़ूम इन (+) और ज़ूम आउट (-) बटन */}
+        <div className="absolute bottom-4 right-4 flex flex-col gap-1.5 z-[1000]">
+          <button
+            type="button"
+            onClick={() => setZoomLevel((prev) => Math.min(prev + 1, 18))}
+            className="w-9 h-9 bg-white hover:bg-gray-100 text-gray-800 rounded-xl shadow-md flex items-center justify-center font-bold border border-gray-200 cursor-pointer active:scale-95"
+            title="Zoom In"
+          >
+            <Plus className="w-5 h-5 text-gray-700" />
+          </button>
+          <button
+            type="button"
+            onClick={() => setZoomLevel((prev) => Math.max(prev - 1, 5))}
+            className="w-9 h-9 bg-white hover:bg-gray-100 text-gray-800 rounded-xl shadow-md flex items-center justify-center font-bold border border-gray-200 cursor-pointer active:scale-95"
+            title="Zoom Out"
+          >
+            <Minus className="w-5 h-5 text-gray-700" />
+          </button>
         </div>
       </div>
 
@@ -102,7 +203,7 @@ export const RideBooking: React.FC = () => {
       <div className="grid grid-cols-2 gap-2">
         <button
           type="button"
-          onClick={() => { setCurrentRide({ name: 'Hello Nepal Bike', rate: 25 }); setCalculatedFare(550); }}
+          onClick={() => { setCurrentRide({ name: 'Hello Nepal Bike', rate: 25 }); }}
           className={`p-3 rounded-2xl border text-left transition-all cursor-pointer ${currentRide.name === 'Hello Nepal Bike' ? 'border-red-600 bg-red-50/50 shadow-sm' : 'border-gray-200'}`}
         >
           <div className="font-black text-xs text-gray-800">🛵 Hello Nepal Bike</div>
@@ -110,7 +211,7 @@ export const RideBooking: React.FC = () => {
         </button>
         <button
           type="button"
-          onClick={() => { setCurrentRide({ name: 'Hello Nepal Auto', rate: 40 }); setCalculatedFare(850); }}
+          onClick={() => { setCurrentRide({ name: 'Hello Nepal Auto', rate: 40 }); }}
           className={`p-3 rounded-2xl border text-left transition-all cursor-pointer ${currentRide.name === 'Hello Nepal Auto' ? 'border-red-600 bg-red-50/50 shadow-sm' : 'border-gray-200'}`}
         >
           <div className="font-black text-xs text-gray-800">🛺 Hello Nepal Auto</div>
@@ -121,7 +222,7 @@ export const RideBooking: React.FC = () => {
       {/* Ride Details & Booking Actions */}
       <div className="space-y-2.5 pt-2 border-t border-gray-100">
         <div className="flex items-center justify-between text-xs">
-          <span className="text-gray-500">कुल अनुमानित दूरी ({pickup} से {dropoff}):</span>
+          <span className="text-gray-500">कुल अनुमानित दूरी:</span>
           <span className="font-bold text-gray-800">{distance} किमी (km)</span>
         </div>
         <div className="flex items-center justify-between text-xs">
