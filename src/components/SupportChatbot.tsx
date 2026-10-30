@@ -1,4 +1,4 @@
-   import React, { useState } from 'react';
+import React, { useState } from 'react';
 import { Send, Bot, User, Loader2, Sparkles } from 'lucide-react';
 
 export const SupportChatbot: React.FC = () => {
@@ -9,9 +9,9 @@ export const SupportChatbot: React.FC = () => {
   const [loading, setLoading] = useState(false);
   const [useOpenRouter, setUseOpenRouter] = useState(false);
 
-  // सीधे यहाँ अपनी पक्की API Keys सेट कर दी हैं ताकि कभी एरर न आए
-  const GEMINI_API_KEY = "यहाँ_अपनी_जेमिनी_एपीआई_की_डाल_दे"; 
-  const OPENROUTER_API_KEY = "Pk.eyJ1IjoicmtkYWlmaWxtcyIsImEiOiJjbXZveDdtOHUweGIyMnpxeGtxemJjODV5In0"; // या अपनी ओपनरौटर की
+  // Yeh rahi teri Gemini API Key jo tune di hai
+  const GEMINI_API_KEY = "AQ.Ab8RN6IhziSgyS5G0EQRP7-Qya_FPtGZyJsj1p6ud5nFFJ9SZg"; 
+  const OPENROUTER_API_KEY = "Pk.eyJ1IjoicmtkYWlmaWxtcyIsImEiOiJjbXZveDdtOHUweGIyMnpxeGtxemJjODV5In0";
 
   const handleSend = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -45,7 +45,7 @@ export const SupportChatbot: React.FC = () => {
         const data = await res.json();
         replyText = data.choices?.[0]?.message?.content || 'OpenRouter से कोई उत्तर नहीं मिला।';
       } else {
-        // सीधी और पक्की Gemini 1.5 Flash API कॉल
+        // Yeh raha Gemini 1.5 Flash ka sahi URL aur teri key
         const res = await fetch(`https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-flash:generateContent?key=${GEMINI_API_KEY}`, {
           method: 'POST',
           headers: {
@@ -146,4 +146,4 @@ export const SupportChatbot: React.FC = () => {
   );
 };
 
-export default SupportChatbot;       
+export default SupportChatbot;
