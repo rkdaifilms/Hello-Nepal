@@ -27,7 +27,7 @@ export default function RideBooking() {
   const [vehicle, setVehicle] = useState<string>('bike'); // bike, auto, car
   const [routeInfo, setRouteInfo] = useState<string>('नेपाल रूट खोजा जा रहा है...');
   const [distanceKm, setDistanceKm] = useState<number>(6.4);
-  const [totalFare, setTotalFare] = useState<number>(178);
+  const [totalFare, setTotalFare] = useState<number>(155);
   const [loading, setLoading] = useState<boolean>(false);
 
   const [showPaymentModal, setShowPaymentModal] = useState<boolean>(false);
@@ -194,17 +194,17 @@ export default function RideBooking() {
     updateFare(calcDist, vehicle);
   };
 
-  // सटीक और वास्तविक किराया (Pathao/InDrive स्टैंडर्ड के अनुसार)
+  // पठाओ और इनड्राइव नेपाल के मानकों के अनुसार बिल्कुल सटीक और किफायती किराया
   const updateFare = (dist: number, selectedVehicle: string) => {
-    let baseFare = 50;
-    let perKm = 20;
+    let baseFare = 40;
+    let perKm = 18;
 
     if (selectedVehicle === 'auto') {
-      baseFare = 100;
-      perKm = 35;
+      baseFare = 80;
+      perKm = 30;
     } else if (selectedVehicle === 'car') {
-      baseFare = 200;
-      perKm = 50;
+      baseFare = 150;
+      perKm = 45;
     }
     
     const calculated = Math.round(baseFare + (dist * perKm));
