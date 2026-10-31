@@ -1,9 +1,11 @@
-import { useEffect, useState } from 'react';
+
+import React, { useEffect, useState } from 'react';
+import type { CSSProperties } from 'react';
+
 import RideBooking from './components/RideBooking';
 import Marketplace from './components/Marketplace';
 import DriverKYC from './components/DriverKYC';
 import AdminDashboard from './components/AdminDashboard';
-import SupportChatbot from './components/SupportChatbot';
 
 type Tab = 'ride' | 'market' | 'kyc' | 'admin';
 
@@ -14,31 +16,42 @@ const TABS: { id: Tab; label: string }[] = [
   { id: 'admin', label: 'एडमिन' },
 ];
 
-const tabFromHash = (): Tab => {
-  const h = window.location.hash.replace('#', '');
-  return TABS.some((t) => t.id === h) ? (h as Tab) : 'ride';
-};
+function getTabFromHash(): Tab {
+  const hash = window.location.hash.replace('#', '');
+  return TABS.some((tab) => tab.id === hash)
+    ? (hash as Tab)
+    : 'ride';
+}
+
+const paneStyle = (visible: boolean, scroll: boolean): CSSProperties => ({
+  display: visible ? 'block' : 'none',
+  position: 'absolute',
+  inset: 0,
+  width: '100%',
+  height: '100%',
+  overflowY: scroll ? 'auto' : 'hidden',
+  overflowX: 'hidden',
+});
 
 export default function App() {
-  const [activeTab, setActiveTab] = useState<Tab>(tabFromHash);
+  const [activeTab, setActiveTab] = useState<Tab>(getTabFromHash);
 
-  // बैक बटन और रिफ्रेश पर भी टैब सही रहे
   useEffect(() => {
-    const onHash = () => setActiveTab(tabFromHash());
-    window.addEventListener('hashchange', onHash);
-    return () => window.removeEventListener('hashchange', onHash);
+    const handleHashChange = () => {
+      setActiveTab(getTabFromHash());
+    };
+
+    window.addEventListener('hashchange', handleHashChange);
+
+    return () => {
+      window.removeEventListener('hashchange', handleHashChange);
+    };
   }, []);
 
-  const goTo = (tab: Tab) => {
-    window.location.hash = tab;
+  const navigate = (tab: Tab) => {
     setActiveTab(tab);
+    window.location.hash = tab;
   };
-
-  const pane = (visible: boolean, scroll: boolean): React.CSSProperties => ({
-    display: visible ? 'block' : 'none',
-    height: '100%',
-    overflowY: scroll ? 'auto' : 'hidden',
-  });
 
   return (
     <div
@@ -47,14 +60,15 @@ export default function App() {
         height: '100dvh',
         display: 'flex',
         flexDirection: 'column',
-        fontFamily: 'system-ui, sans-serif',
-        background: '#f8fafc',
         overflow: 'hidden',
+        background: '#f8fafc',
+        fontFamily: 'system-ui, sans-serif',
       }}
     >
-      {/* टॉप हेडर और नेविगेशन */}
-      <div
+      <header
         style={{
+          flexShrink: 0,
+          zIndex: 100,
           background: '#dc2626',
           color: '#fff',
           padding: '10px 12px',
@@ -62,70 +76,96 @@ export default function App() {
           justifyContent: 'space-between',
           alignItems: 'center',
           gap: 8,
-          zIndex: 1000,
-          boxShadow: '0 2px 8px rgba(0,0,0,0.2)',
-          flexShrink: 0,
+          boxShadow: '0 2px 8px rgba(0,0,0,0.15)',
         }}
       >
-        <div style={{ display: 'flex', alignItems: 'center', gap: 8, flexShrink: 0 }}>
-          <span style={{ background: '#fff', color: '#dc2626', padding: '4px 8px', borderRadius: 4, fontWeight: 'bold', fontSize: 14 }}>
+        <div
+          style={{
+            display: 'flex',
+            alignItems: 'center',
+            gap: 8,
+            fontWeight: 'bold',
+            whiteSpace: 'nowrap',
+          }}
+        >
+          <span
+            style={{
+              background: '#fff',
+              color: '#dc2626',
+              padding: '4px 8px',
+              borderRadius: 5,
+            }}
+          >
             HN
           </span>
-          <span style={{ fontSize: 17, fontWeight: 'bold', whiteSpace: 'nowrap' }}>Hello Nepal</span>
+          <span>Hello Nepal</span>
         </div>
 
-        <nav style={{ display: 'flex', gap: 4, overflowX: 'auto' }}>
-          {TABS.map((t) => (
+        <nav
+          aria-label="मुख्य नेविगेशन"
+          style={{
+            display: 'flex',
+            gap: 4,
+            overflowX: 'auto',
+            minWidth: 0,
+          }}
+        >
+          {TABS.map((tab) => (
             <button
-              key={t.id}
-              onClick={() => goTo(t.id)}
+              key={tab.id}
+              type="button"
+              aria-current={activeTab === tab.id ? 'page' : undefined}
+              onClick={() => navigate(tab.id)}
               style={{
-                background: activeTab === t.id ? 'rgba(255,255,255,0.22)' : 'transparent',
+                flexShrink: 0,
+                background:
+                  activeTab === tab.id
+                    ? 'rgba(255,255,255,0.22)'
+                    : 'transparent',
                 color: '#fff',
-                border: 'none',
-                borderBottom: activeTab === t.id ? '2px solid #fff' : '2px solid transparent',
-                padding: '8px 10px',
+                border: 0,
+                borderBottom:
+                  activeTab === tab.id
+                    ? '2px solid #fff'
+                    : '2px solid transparent',
                 borderRadius: 6,
+                padding: '8px 10px',
                 fontSize: 14,
                 fontWeight: 'bold',
                 cursor: 'pointer',
                 whiteSpace: 'nowrap',
               }}
             >
-              {t.label}
+              {tab.label}
             </button>
           ))}
         </nav>
-      </div>
+      </header>
 
-      {/* मुख्य बॉडी */}
-      <div style={{ flex: 1, minHeight: 0, position: 'relative' }}>
-        {/* राइड हमेशा चालू रहता है ताकि टैब बदलने पर बुकिंग और मैप न खोएँ */}
-        <div style={pane(activeTab === 'ride', false)}>
+      <main
+        style={{
+          flex: 1,
+          minHeight: 0,
+          position: 'relative',
+          overflow: 'hidden',
+        }}
+      >
+        <section style={paneStyle(activeTab === 'ride', false)}>
           <RideBooking />
-        </div>
+        </section>
 
-        {activeTab === 'market' && (
-          <div style={pane(true, true)}>
-            <Marketplace />
-          </div>
-        )}
-        {activeTab === 'kyc' && (
-          <div style={pane(true, true)}>
-            <DriverKYC />
-          </div>
-        )}
-        {activeTab === 'admin' && (
-          <div style={pane(true, true)}>
-            <AdminDashboard />
-          </div>
-        )}
-      </div>
+        <section style={paneStyle(activeTab === 'market', true)}>
+          {activeTab === 'market' && <Marketplace />}
+        </section>
 
-      {/* सपोर्ट चैटबोट: ऊपर-बाएँ, ताकि बुकिंग बटन और मैप ज़ूम न ढके */}
-      <div style={{ position: 'fixed', top: 64, left: 12, zIndex: 1500 }}>
-        <SupportChatbot />
-      </div>
+        <section style={paneStyle(activeTab === 'kyc', true)}>
+          {activeTab === 'kyc' && <DriverKYC />}
+        </section>
+
+        <section style={paneStyle(activeTab === 'admin', true)}>
+          {activeTab === 'admin' && <AdminDashboard />}
+        </section>
+      </main>
     </div>
   );
 }
