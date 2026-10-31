@@ -1,10 +1,9 @@
-
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import type { ProductItem } from '../types';
 import { CheckoutModal } from './CheckoutModal';
 import { Search, Share2, ShoppingBag, Check } from 'lucide-react';
 
-const PRODUCTS: ProductItem[] = [
+const INITIAL_PRODUCTS: ProductItem[] = [
   {
     id: 'prod-1',
     vendorId: 'ven-1',
@@ -44,10 +43,23 @@ const PRODUCTS: ProductItem[] = [
 ];
 
 const Marketplace: React.FC = () => {
+  const [products, setProducts] = useState<ProductItem[]>(() => {
+    // प्रोफाइल या लोकल स्टोरेज से पोस्ट किए गए प्रोडक्ट्स को लोड करना[span_2](start_span)[span_2](end_span)
+    const saved = localStorage.getItem('hello_nepal_marketplace_products');
+    if (saved) {
+      try {
+        const parsed = JSON.parse(saved);
+        return [...parsed, ...INITIAL_PRODUCTS];
+      } catch (e) {
+        return INITIAL_PRODUCTS;
+      }
+    }
+    return INITIAL_PRODUCTS;
+  });
+
   const [selectedCategory, setSelectedCategory] = useState<string>('All');
   const [searchQuery, setSearchQuery] = useState('');
-  const [selectedProduct, setSelectedProduct] =
-    useState<ProductItem | null>(null);
+  const [selectedProduct, setSelectedProduct] = useState<ProductItem | null>(null);
   const [copiedId, setCopiedId] = useState<string | null>(null);
 
   const categories = [
@@ -59,7 +71,24 @@ const Marketplace: React.FC = () => {
     'Electronics',
   ];
 
-  const filteredProducts = PRODUCTS.filter((product) => {
+  // हर बार जब मार्केटप्लेस खुले, प्रोफाइल के नए पोस्ट्स सिंक हो जाएं[span_3](start_span)[span_3](end_span)
+  useEffect(() => {
+    const syncProducts = () => {
+      const saved = localStorage.getItem('hello_nepal_marketplace_products');
+      if (saved) {
+        try {
+          const parsed = JSON.parse(saved);
+          setProducts([...parsed, ...INITIAL_PRODUCTS]);
+        } catch (e) {}
+      }
+    };
+
+    syncProducts();
+    window.addEventListener('storage', syncProducts);
+    return () => window.removeEventListener('storage', syncProducts);
+  }, []);
+
+  const filteredProducts = products.filter((product) => {
     const matchesCategory =
       selectedCategory === 'All' ||
       product.category === selectedCategory;
@@ -104,7 +133,7 @@ const Marketplace: React.FC = () => {
         <div className="flex flex-col sm:flex-row items-center justify-between gap-3">
           <h2 className="text-xl font-extrabold text-zinc-900 dark:text-zinc-100 flex items-center gap-2">
             <ShoppingBag className="w-6 h-6 text-red-600" />
-            नेपाल लोकल मार्केटप्लेस
+            नेपाल लोकल मार्केटप्लेस (प्रोफाइल सिंकड)[span_4](start_span)[span_4](end_span)
           </h2>
 
           <div className="relative w-full sm:w-72">
@@ -183,14 +212,14 @@ const Marketplace: React.FC = () => {
                   <div>
                     <span className="text-xs text-zinc-400">मूल्य</span>
                     <div className="text-base font-extrabold text-red-600">
-                      रु {product.markupPrice}
+                      रु {product.markupPrice || product.basePrice}
                     </div>
                   </div>
 
                   <div className="text-right">
                     <span className="text-xs text-zinc-400">स्टॉक</span>
                     <div className="text-xs font-semibold text-zinc-700 dark:text-zinc-300">
-                      {product.stockCount} पीस
+                      {product.stockCount || 10} पीस
                     </div>
                   </div>
                 </div>
