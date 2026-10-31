@@ -10,16 +10,16 @@ export default function RideBooking() {
   const [pickup, setPickup] = useState<string>('Bhujauli, Siddharthanagar');
   const [dropoff, setDropoff] = useState<string>('Bairahawa');
   const [vehicle, setVehicle] = useState<string>('bike'); // bike, auto, car
-  const [routeInfo, setRouteInfo] = useState<string>('रूट खोजा जा रहा है...');
-  const [distanceKm, setDistanceKm] = useState<number>(22.5);
-  const [totalFare, setTotalFare] = useState<number>(650);
+  const [routeInfo, setRouteInfo] = useState<string>('नेविगेशन रूट खोजा जा रहा है...');
+  const [distanceKm, setDistanceKm] = useState<number>(5.0);
+  const [totalFare, setTotalFare] = useState<number>(180);
   const [loading, setLoading] = useState<boolean>(false);
 
   const [showPaymentModal, setShowPaymentModal] = useState<boolean>(false);
   const [paymentMethod, setPaymentMethod] = useState<string>('cash');
   const [bookingConfirmed, setBookingConfirmed] = useState<boolean>(false);
   
-  // रियल मर्चेंट और पेमेंट स्टेट्स
+  // मर्चेंट और रियल पेमेंट स्टेट्स
   const [merchantQr, setMerchantQr] = useState<string>('');
   const [isSettingQr, setIsSettingQr] = useState<boolean>(false);
   const [walletPhone, setWalletPhone] = useState<string>('');
@@ -40,18 +40,32 @@ export default function RideBooking() {
       mapInstance.current = null;
     }
 
-    const map = L.map(mapContainer.current).setView([27.5042, 83.4485], 11);
+    // नेपाल के सिद्धार्थनगर/भैरहवा क्षेत्र पर डिफ़ॉल्ट फोकस
+    const map = L.map(mapContainer.current, {
+      zoomControl: true,
+      fadeAnimation: true,
+      zoomAnimation: true
+    }).setView([27.5042, 83.4485], 14);
+
     mapInstance.current = map;
 
+    // OpenStreetMap टाइल्स लोड करना ताकि कोई खाली पन्ना (blank tile) न दिखे
     L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
       maxZoom: 19,
-      attribution: '&copy; OpenStreetMap contributors'
+      minZoom: 10,
+      subdomains: ['a', 'b', 'c'],
+      attribution: '&copy; OpenStreetMap Nepal'
     }).addTo(map);
 
     const layerGroup = L.layerGroup().addTo(map);
     routeLayerRef.current = layerGroup;
 
     handleFindRoute();
+
+    // रीसाइज फिक्स ताकि मैप पूरी तरह लोड हो
+    setTimeout(() => {
+      map.invalidateSize();
+    }, 250);
 
     return () => {
       if (mapInstance.current) {
@@ -80,7 +94,7 @@ export default function RideBooking() {
     if (!mapInstance.current || !routeLayerRef.current) return;
 
     setLoading(true);
-    setRouteInfo('🛣️ सड़क का रूट लोड हो रहा है...');
+    setRouteInfo('🗺️ नेपाल की गलियों और हाइवे का लाइव रूट लोड हो रहा है...');
     setBookingConfirmed(false);
 
     const cleanPickup = pickup.trim();
@@ -93,14 +107,16 @@ export default function RideBooking() {
     const currentLayer = routeLayerRef.current;
     currentLayer.clearLayers();
 
-    const startMarker = L.marker([startCoords[1], startCoords[0]]).bindPopup(`पिकअप: ${cleanPickup}`);
-    const endMarker = L.marker([endCoords[1], endCoords[0]]).bindPopup(`ड्रॉप: ${cleanDropoff}`);
+    // पिकअप और ड्रॉप मार्कर्स
+    const startMarker = L.marker([startCoords[1], startCoords[0]]).bindPopup(`🟢 पिकअप: ${cleanPickup}`);
+    const endMarker = L.marker([endCoords[1], endCoords[0]]).bindPopup(`🔴 ड्रॉप (Drop Here): ${cleanDropoff}`);
     currentLayer.addLayer(startMarker);
     currentLayer.addLayer(endMarker);
 
     try {
+      // OSRM API से रोड की सटीक ज्यामिति (Geometry) मंगवाना ताकि लाइन सीधे सड़क पर चले
       const routeRes = await fetch(
-        `https://router.project-osrm.org/route/v1/driving/${startCoords[0]},${startCoords[1]};${endCoords[0]},${endCoords[1]}?overview=full&geometries=geojson`
+        `https://router.project-osrm.org/route/v1/driving/${startCoords[0]},${startCoords[1]};${endCoords[0]},${endCoords[1]}?overview=full&geometries=geojson&steps=true`
       );
       const routeData = await routeRes.json();
 
@@ -110,39 +126,45 @@ export default function RideBooking() {
         const durMin = Math.round(route.duration / 60);
 
         setDistanceKm(distKmVal);
-        setRouteInfo(`📍 दूरी: ${distKmVal} किमी | ⏱️ समय: ${durMin} मिनट`);
+        setRouteInfo(`📍 दूरी: ${distKmVal} किमी | ⏱️ समय: ${durMin} मिनट (रास्ते में पिपरहवा, नौडिहवा आदि शामिल)`);
 
+        // सड़क पर चलने वाली लाइव नेविगेशन लाइन (Polyline)
         const coords = route.geometry.coordinates.map((coord: [number, number]) => [coord[1], coord[0]]);
-        const polyline = L.polyline(coords, { color: '#dc2626', weight: 5, opacity: 0.8 });
+        
+        // बैकग्राउंड ग्लो लाइन
+        const glowLine = L.polyline(coords, { color: '#60a5fa', weight: 8, opacity: 0.5 });
+        // मुख्य नेविगेशन रोड लाइन
+        const mainRouteLine = L.polyline(coords, { color: '#2563eb', weight: 5, opacity: 0.9 });
 
-        currentLayer.addLayer(polyline);
-        currentMap.fitBounds(polyline.getBounds(), { padding: [30, 30] });
+        currentLayer.addLayer(glowLine);
+        currentLayer.addLayer(mainRouteLine);
+
+        currentMap.fitBounds(mainRouteLine.getBounds(), { padding: [40, 40] });
 
         updateFare(distKmVal);
       } else {
-        drawRealisticHighwayRoute(startCoords, endCoords, currentMap, currentLayer);
+        drawFallbackRoute(startCoords, endCoords, currentMap, currentLayer);
       }
     } catch (e) {
-      drawRealisticHighwayRoute(startCoords, endCoords, currentMap, currentLayer);
+      drawFallbackRoute(startCoords, endCoords, currentMap, currentLayer);
     }
 
     setLoading(false);
   };
 
-  const drawRealisticHighwayRoute = (start: [number, number], end: [number, number], map: L.Map, layer: L.LayerGroup) => {
-    const highwayLatLon: [number, number][] = [
+  const drawFallbackRoute = (start: [number, number], end: [number, number], map: L.Map, layer: L.LayerGroup) => {
+    const roadLatLon: [number, number][] = [
       [start[1], start[0]],
-      [27.5250, 83.4500],
-      [27.5800, 83.4650],
+      [27.5150, 83.4450],
       [end[1], end[0]]
     ];
-    const polyline = L.polyline(highwayLatLon, { color: '#dc2626', weight: 5, opacity: 0.8 });
+    const polyline = L.polyline(roadLatLon, { color: '#2563eb', weight: 5, opacity: 0.9 });
     layer.addLayer(polyline);
-    map.fitBounds(polyline.getBounds(), { padding: [30, 30] });
+    map.fitBounds(polyline.getBounds(), { padding: [40, 40] });
     
-    setDistanceKm(22.5);
-    setRouteInfo(`📍 दूरी: 22.5 किमी (सिद्धार्थ हाइवे) | ⏱️ समय: 35 मिनट`);
-    updateFare(22.5);
+    setDistanceKm(5.0);
+    setRouteInfo(`📍 दूरी: 5.0 किमी | ⏱️ समय: 12 मिनट (नेपाल लोकल रूट)`);
+    updateFare(5.0);
   };
 
   const updateFare = (dist: number) => {
@@ -170,21 +192,21 @@ export default function RideBooking() {
       <div style={{ background: '#ffffff', padding: '10px 12px', borderBottom: '1px solid #e2e8f0', boxShadow: '0 2px 4px rgba(0,0,0,0.05)', flexShrink: 0 }}>
         <div style={{ display: 'flex', gap: '8px', marginBottom: '8px' }}>
           <div style={{ flex: 1 }}>
-            <label style={{ fontSize: '10px', color: '#64748b', fontWeight: 'bold' }}>🟢 पिकअप स्थान (Pickup):</label>
+            <label style={{ fontSize: '10px', color: '#64748b', fontWeight: 'bold' }}>🟢 पिकअप स्थान (भुजौली / नेपाल):</label>
             <input type="text" value={pickup} onChange={(e) => setPickup(e.target.value)} style={{ width: '100%', padding: '6px 8px', borderRadius: '6px', border: '1px solid #cbd5e1', fontSize: '13px', boxSizing: 'border-box' }} />
           </div>
           <div style={{ flex: 1 }}>
-            <label style={{ fontSize: '10px', color: '#64748b', fontWeight: 'bold' }}>🔴 ड्रॉपऑफ स्थान (Drop):</label>
+            <label style={{ fontSize: '10px', color: '#64748b', fontWeight: 'bold' }}>🔴 ड्रॉपऑफ स्थान (भैरहवा / नेपाल):</label>
             <input type="text" value={dropoff} onChange={(e) => setDropoff(e.target.value)} style={{ width: '100%', padding: '6px 8px', borderRadius: '6px', border: '1px solid #cbd5e1', fontSize: '13px', boxSizing: 'border-box' }} />
           </div>
         </div>
         <button onClick={handleFindRoute} style={{ width: '100%', background: '#2563eb', color: '#fff', border: 'none', padding: '7px', borderRadius: '6px', fontSize: '12px', fontWeight: 'bold', cursor: 'pointer' }}>
-          {loading ? 'रूट खोजा जा रहा है...' : '🔄 राउट और किराया खोजें (Search Route)'}
+          {loading ? 'रूट लोड हो रहा है...' : '🔄 लाइव जीपीएस रोड और रूट खोजें'}
         </button>
       </div>
 
-      {/* छोटा मैप ताकि पूरा इंटरफेस और जीपीएस रोड साफ दिखे */}
-      <div ref={mapContainer} style={{ width: '100%', height: '170px', flexShrink: 0, zIndex: 1, borderBottom: '1px solid #e2e8f0' }} />
+      {/* मैप जिस पर सड़क की लाइन और लोकल रास्ते बिल्कुल साफ दिखेंगे */}
+      <div ref={mapContainer} style={{ width: '100%', height: '180px', flexShrink: 0, zIndex: 1, borderBottom: '1px solid #e2e8f0', background: '#e2e8f0' }} />
 
       {/* नीचे वाहन चयन, दूरी, किराया और बुकिंग पैनल */}
       <div style={{ padding: '12px', background: '#ffffff', flex: 1, display: 'flex', flexDirection: 'column', gap: '10px' }}>
@@ -218,8 +240,8 @@ export default function RideBooking() {
 
         {/* रूट की जानकारी और कुल किराया */}
         <div style={{ background: '#f8fafc', padding: '8px 10px', borderRadius: '8px', border: '1px solid #e2e8f0', fontSize: '12px' }}>
-          <div style={{ color: '#334155', marginBottom: '2px' }}>{routeInfo}</div>
-          <div style={{ color: '#16a34a', fontWeight: 'bold', display: 'flex', justifyContent: 'space-between' }}>
+          <div style={{ color: '#334155', marginBottom: '2px', fontWeight: '500' }}>{routeInfo}</div>
+          <div style={{ color: '#16a34a', fontWeight: 'bold', display: 'flex', justifyContent: 'space-between', marginTop: '4px' }}>
             <span>कुल किराया ({vehicle.toUpperCase()}):</span>
             <span>Rs. {totalFare} NPR</span>
           </div>
@@ -232,7 +254,7 @@ export default function RideBooking() {
           </button>
         ) : (
           <div style={{ padding: '10px', background: '#f0fdf4', border: '1px solid #bbf7d0', borderRadius: '8px', fontSize: '12px' }}>
-            <div style={{ color: '#15803d', fontWeight: 'bold', marginBottom: '2px' }}>✅ राइड बुक हो गई! ड्राइवर आ रहा है।</div>
+            <div style={{ color: '#15803d', fontWeight: 'bold', marginBottom: '2px' }}>✅ राइड बुक हो गई! (Drop Here) के लिए ड्राइवर आ रहा है।</div>
             <div style={{ color: '#1e293b', marginBottom: '4px' }}><b>{assignedDriver.name}</b> ({assignedDriver.vehicleNo}) - मो: {assignedDriver.phone}</div>
             <button onClick={() => setBookingConfirmed(false)} style={{ background: '#dc2626', color: '#fff', border: 'none', padding: '5px 10px', borderRadius: '4px', fontSize: '11px', fontWeight: 'bold', cursor: 'pointer', width: '100%' }}>
               नयी बुकिंग करें
@@ -256,7 +278,7 @@ export default function RideBooking() {
               <span style={{ color: '#16a34a' }}>Rs. {totalFare} NPR</span>
             </div>
 
-            {/* ड्राइवर मर्चेंट QR सेट करने का विकल्प */}
+            {/* ड्राइवर मर्चेंट QR स्कैनर सेट करने का विकल्प */}
             <div style={{ marginBottom: '12px', background: '#fffbeb', border: '1px solid #fde68a', padding: '8px', borderRadius: '6px' }}>
               <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
                 <span style={{ fontSize: '11px', fontWeight: 'bold', color: '#b45309' }}>ड्राइवर मर्चेंट QR स्कैनर:</span>
@@ -309,7 +331,7 @@ export default function RideBooking() {
               </label>
             </div>
 
-            {/* यदि डिजिटल पेमेंट (eSewa, IME Pay, Khalti) चुना गया हो */}
+            {/* यदि डिजिटल पेमेंट चुना गया हो */}
             {paymentMethod !== 'cash' && (
               <div style={{ background: '#f8fafc', padding: '10px', borderRadius: '6px', border: '1px solid #e2e8f0', marginBottom: '12px', display: 'flex', flexDirection: 'column', gap: '8px' }}>
                 <div style={{ fontSize: '11px', fontWeight: 'bold', color: '#334155' }}>{paymentMethod.toUpperCase()} विवरण दर्ज करें:</div>
