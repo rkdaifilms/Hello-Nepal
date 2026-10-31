@@ -22,8 +22,15 @@ export default function RideBooking() {
   const mapInstance = useRef<L.Map | null>(null);
   const routeLayerRef = useRef<L.LayerGroup | null>(null);
 
-  const [pickup, setPickup] = useState<string>('Bhujouli');
-  const [dropoff, setDropoff] = useState<string>('Bairahawa');
+  // 🗺️ localStorage से पुरानी सेव्ड लोकेशन लोड करना ताकि ऐप बंद होने या रीफ्रेश पर गायब न हो
+  const [pickup, setPickup] = useState<string>(() => {
+    return localStorage.getItem('hn_saved_pickup') || 'Bhujouli';
+  });
+  
+  const [dropoff, setDropoff] = useState<string>(() => {
+    return localStorage.getItem('hn_saved_dropoff') || 'Bairahawa';
+  });
+
   const [vehicle, setVehicle] = useState<string>('bike'); // bike, auto, car
   const [routeInfo, setRouteInfo] = useState<string>('रूट और रास्ते के गाँवों की जानकारी खोजी जा रही है...');
   const [distanceKm, setDistanceKm] = useState<number>(5.0);
@@ -45,6 +52,15 @@ export default function RideBooking() {
     vehicleNo: 'Lu 2 Pa 4590',
     eta: '3 मिनट'
   });
+
+  // 💾 जैसे ही यूजर पिकअप या ड्रॉपऑफ बदले, उसे तुरंत ब्राउज़र स्टोरेज में सेव कर देना
+  useEffect(() => {
+    localStorage.setItem('hn_saved_pickup', pickup);
+  }, [pickup]);
+
+  useEffect(() => {
+    localStorage.setItem('hn_saved_dropoff', dropoff);
+  }, [dropoff]);
 
   useEffect(() => {
     if (!mapContainer.current) return;
@@ -162,7 +178,6 @@ export default function RideBooking() {
 
         setDistanceKm(distKmVal);
 
-        // बीच में पड़ने वाले संभावित लोकल क्षेत्र/गाँवों की डायनामिक लिस्ट दिखाने के लिए
         let viaPathText = ` (${pickup} ➔ मेन रोड ➔ भैरहवा चौक ➔ ${dropoff})`;
         if (pickup.toLowerCase().includes('bhujouli') && dropoff.toLowerCase().includes('bairahawa')) {
           viaPathText = ` (भुजौली ➔ मेन लिंक रोड ➔ सिद्धार्थनगर चौक ➔ भैरहवा)`;
@@ -213,12 +228,12 @@ export default function RideBooking() {
   };
 
   const updateFare = (dist: number, selectedVehicle: string) => {
-    let perKmRate = 15; // बाइक: पठाओ से ₹5 कम (1 किमी का ₹15)
+    let perKmRate = 15; // बाइक: पठाओ से ₹5 कम
 
     if (selectedVehicle === 'auto') {
-      perKmRate = 20; // ऑटो: 1 किमी का ₹20 (5 किमी का सीधे ₹100)
+      perKmRate = 20; 
     } else if (selectedVehicle === 'car') {
-      perKmRate = 30; // कार: 1 किमी का ₹30
+      perKmRate = 30; 
     }
     
     const calculated = Math.round(dist * perKmRate);
@@ -288,7 +303,7 @@ export default function RideBooking() {
           </div>
         </div>
 
-        {/* रूट की जानकारी, दोनों लोकेशन और बीच के गाँवों के नाम */}
+        {/* रूट की जानकारी */}
         <div style={{ background: '#f8fafc', padding: '8px 10px', borderRadius: '8px', border: '1px solid #e2e8f0', fontSize: '12px' }}>
           <div style={{ color: '#0f172a', fontWeight: 'bold', marginBottom: '4px', borderBottom: '1px solid #e2e8f0', paddingBottom: '4px' }}>
             📍 रूट: <span style={{ color: '#16a34a' }}>{pickup}</span> ➔ <span style={{ color: '#dc2626' }}>{dropoff}</span>
@@ -378,7 +393,7 @@ export default function RideBooking() {
 
               <label style={{ display: 'flex', alignItems: 'center', gap: '8px', padding: '8px', border: paymentMethod === 'khalti' ? '2px solid #5d2e8c' : '1px solid #cbd5e1', borderRadius: '6px', cursor: 'pointer' }}>
                 <input type="radio" name="pay" checked={paymentMethod === 'khalti'} onChange={() => setPaymentMethod('khalti')} />
-                <span style={{ fontWeight: 'bold' }}>🟣 Khalti Wallet (रियल पेमेंट)</span>
+                <span style={{ fontWeight: 'bold' => '🟣 Khalti Wallet (रियल पेमेंट)</span>
               </label>
             </div>
 
