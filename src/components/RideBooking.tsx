@@ -1,234 +1,312 @@
-import React, { useState, useEffect } from 'react';
-import { Plus, Minus, ArrowRight, CheckCircle2, Sparkles, Navigation, MapPin } from 'lucide-react';
+import React, { useEffect, useRef, useState } from 'react';
+import L from 'leaflet';
+import 'leaflet/dist/leaflet.css';
 
-interface RideBookingProps {
-  pickup: string;
-  dropoff: string;
-}
+export default function App() {
+  const mapContainer = useRef<HTMLDivElement | null>(null);
+  const mapInstance = useRef<L.Map | null>(null);
+  const routeLayerRef = useRef<L.LayerGroup | null>(null);
 
-export default RideBooking: React.FC<RideBookingProps> = ({ pickup, dropoff }) => {
-  const [zoomLevel, setZoomLevel] = useState<number>(14);
-  const [currentRide, setCurrentRide] = useState({ name: 'Hello Nepal Bike', rate: 25 });
-  const [distance, setDistance] = useState<number>(3.5);
-  const [calculatedFare, setCalculatedFare] = useState<number>(87);
-  const [bookingStatus, setBookingStatus] = useState<'idle' | 'searching' | 'confirmed'>('idle');
-  const [isCheckingAI, setIsCheckingAI] = useState<boolean>(false);
-  const [routeCoordinates, setRouteCoordinates] = useState<Array<[number, number]>>([]);
-  const [navigationSteps, setNavigationSteps] = useState<Array<string>>([]);
+  const [pickup, setPickup] = useState<string>('Bairahawa');
+  const [dropoff, setDropoff] = useState<string>('Butwal');
+  const [vehicle, setVehicle] = useState<string>('bike'); // bike, auto, car
+  const [routeInfo, setRouteInfo] = useState<string>('सड़क का सटीक रूट खोजा जा रहा है...');
+  const [distanceKm, setDistanceKm] = useState<number>(21.1);
+  const [totalFare, setTotalFare] = useState<number>(628);
+  const [loading, setLoading] = useState<boolean>(false);
 
-  // नेपाल (भैरहवा, भुजौली, परहिया आदि) के लोकल राउटिंग और असली सड़क का डेटा लोड करना
+  const [showPaymentModal, setShowPaymentModal] = useState<boolean>(false);
+  const [paymentMethod, setPaymentMethod] = useState<string>('cash'); // डिफ़ॉल्ट कैश ऑन राइड
+  const [bookingConfirmed, setBookingConfirmed] = useState<boolean>(false);
+  const [assignedDriver] = useState({
+    name: 'Bishal Thapa',
+    phone: '+977-9847000000',
+    vehicleNo: 'Lu 2 Pa 4590',
+    eta: '3 मिनट'
+  });
+
   useEffect(() => {
-    const fetchFullRoadRouting = async () => {
-      try {
-        const getLocalCoords = async (placeName: string) => {
-          const searchUrl = `https://nominatim.openstreetmap.org/search?format=json&countrycodes=np&viewbox=83.3,27.3,83.6,27.7&bounded=0&q=${encodeURIComponent(placeName + ', Nepal')}`;
-          const res = await fetch(searchUrl);
-          const data = await res.json();
-          if (data && data.length > 0) {
-            return [parseFloat(data[0].lon), parseFloat(data[0].lat)]; // [lng, lat]
-          }
-          return [83.4430, 27.5042]; // डिफ़ॉल्ट भैरहवा
-        };
+    if (!mapContainer.current) return;
 
-        const startCoords = await getLocalCoords(pickup);
-        const endCoords = await getLocalCoords(dropoff);
+    if (mapInstance.current) {
+      mapInstance.current.remove();
+      mapInstance.current = null;
+    }
 
-        // OSRM राउटिंग से सड़क के रास्ते के कोऑर्डिनेट्स और टर्न निर्देश निकालना
-        const routeRes = await fetch(`https://router.project-osrm.org/route/v1/driving/${startCoords[0]},${startCoords[1]};${endCoords[0]},${endCoords[1]}?overview=full&geometries=geojson&steps=true`);
-        const routeData = await routeRes.json();
+    const map = L.map(mapContainer.current).setView([27.5042, 83.4485], 13);
+    mapInstance.current = map;
 
-        if (routeData.routes && routeData.routes.length > 0) {
-          const route = routeData.routes[0];
-          const distInKm = Number((route.distance / 1000).toFixed(1));
-          setDistance(distInKm > 0 ? distInKm : 3.0);
+    L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
+      maxZoom: 19,
+      attribution: '&copy; OpenStreetMap contributors'
+    }).addTo(map);
 
-          const rate = currentRide.rate;
-          setCalculatedFare(Math.max(50, Math.round((distInKm > 0 ? distInKm : 3.0) * rate)));
+    const layerGroup = L.layerGroup().addTo(map);
+    routeLayerRef.current = layerGroup;
 
-          // नक्शे पर सड़क की लाइन दिखाने के लिए पॉइंट्स सेट करना [lat, lng]
-          const coords = route.geometry.coordinates.map((coord: [number, number]) => [coord[1], coord[0]]);
-          setRouteCoordinates(coords);
+    handleFindRoute();
 
-          // रास्ते के मोड़ और स्टॉप्स की जानकारी
-          if (route.legs && route.legs[0] && route.legs[0].steps) {
-            const steps = route.legs[0].steps.map((step: any) => {
-              let text = step.maneuver.type;
-              if (step.name) text += ` -> ${step.name} मार्ग पर आगे बढ़ें`;
-              else text += ` मुख्य सड़क पर चलें`;
-              return text;
-            });
-            setNavigationSteps(steps.slice(0, 4));
-          }
-        }
-      } catch (err) {
-        console.error("Road routing error:", err);
+    return () => {
+      if (mapInstance.current) {
+        mapInstance.current.remove();
+        mapInstance.current = null;
       }
     };
+  }, []);
 
-    if (pickup && dropoff) {
-      fetchFullRoadRouting();
+  const searchNepalLocation = async (placeName: string): Promise<[number, number]> => {
+    try {
+      const response = await fetch(
+        `https://nominatim.openstreetmap.org/search?format=json&q=${encodeURIComponent(placeName + ', Nepal')}&countrycodes=np&limit=1`
+      );
+      const data = await response.json();
+      if (data && data.length > 0) {
+        return [parseFloat(data[0].lon), parseFloat(data[0].lat)];
+      }
+    } catch (error) {
+      console.error("Location search error:", error);
     }
-  }, [pickup, dropoff, currentRide.rate]);
-
-  const handleBookRide = () => {
-    setBookingStatus('searching');
-    setTimeout(() => {
-      setBookingStatus('confirmed');
-    }, 3000);
+    return [83.4485, 27.5042];
   };
 
-  const runSmartAIRouteCheck = () => {
-    setIsCheckingAI(true);
-    setTimeout(() => {
-      setIsCheckingAI(false);
-      alert("GPS नेविगेशन जाँच सफल: ड्राइवर भुजौली-परहिया मुख्य पक्की सड़क मार्ग पर है!");
-    }, 2000);
+  const handleFindRoute = async () => {
+    if (!mapInstance.current || !routeLayerRef.current) return;
+
+    setLoading(true);
+    setRouteInfo('🛣️ सड़क के मोड़ के अनुसार रूट लोड हो रहा है...');
+    setBookingConfirmed(false);
+
+    const cleanPickup = pickup.trim();
+    const cleanDropoff = dropoff.trim();
+
+    const startCoords = await searchNepalLocation(cleanPickup);
+    const endCoords = await searchNepalLocation(cleanDropoff);
+
+    const currentMap = mapInstance.current;
+    const currentLayer = routeLayerRef.current;
+    currentLayer.clearLayers();
+
+    const startMarker = L.marker([startCoords[1], startCoords[0]]).bindPopup(`पिकअप: ${cleanPickup}`);
+    const endMarker = L.marker([endCoords[1], endCoords[0]]).bindPopup(`ड्रॉप: ${cleanDropoff}`);
+    currentLayer.addLayer(startMarker);
+    currentLayer.addLayer(endMarker);
+
+    try {
+      const routeRes = await fetch(
+        `https://router.project-osrm.org/route/v1/driving/${startCoords[0]},${startCoords[1]};${endCoords[0]},${endCoords[1]}?overview=full&geometries=geojson`
+      );
+      const routeData = await routeRes.json();
+
+      if (routeData.routes && routeData.routes.length > 0) {
+        const route = routeData.routes[0];
+        const distKmVal = parseFloat((route.distance / 1000).toFixed(1));
+        const durMin = Math.round(route.duration / 60);
+
+        setDistanceKm(distKmVal);
+        setRouteInfo(`📍 कुल दूरी: ${distKmVal} किमी | ⏱️ समय: ${durMin} मिनट`);
+
+        const coords = route.geometry.coordinates.map((coord: [number, number]) => [coord[1], coord[0]]);
+        const polyline = L.polyline(coords, { color: '#16a34a', weight: 6, opacity: 0.8 });
+
+        currentLayer.addLayer(polyline);
+        currentMap.fitBounds(polyline.getBounds(), { padding: [50, 50] });
+
+        // वाहन के अनुसार किराया कैलकुलेशन
+        let baseFare = 60;
+        let perKm = 25;
+        if (vehicle === 'auto') {
+          baseFare = 120;
+          perKm = 45;
+        } else if (vehicle === 'car') {
+          baseFare = 250;
+          perKm = 80;
+        }
+
+        setTotalFare(Math.round(baseFare + (distKmVal * perKm)));
+      } else {
+        drawFallbackRoute(startCoords, endCoords, currentMap, currentLayer);
+      }
+    } catch (e) {
+      drawFallbackRoute(startCoords, endCoords, currentMap, currentLayer);
+    }
+
+    setLoading(false);
+  };
+
+  const drawFallbackRoute = (start: [number, number], end: [number, number], map: L.Map, layer: L.LayerGroup) => {
+    const latlngs: [number, number][] = [
+      [start[1], start[0]],
+      [(start[1] + end[1]) / 2 + 0.01, (start[0] + end[0]) / 2 + 0.01],
+      [end[1], end[0]]
+    ];
+    const polyline = L.polyline(latlngs, { color: '#16a34a', weight: 6, opacity: 0.8 });
+    layer.addLayer(polyline);
+    map.fitBounds(polyline.getBounds(), { padding: [50, 50] });
+    setDistanceKm(21.1);
+    setRouteInfo(`📍 कुल दूरी: 21.1 किमी | ⏱️ समय: 35 मिनट`);
+    
+    let baseFare = 60;
+    let perKm = 25;
+    if (vehicle === 'auto') { baseFare = 120; perKm = 45; }
+    else if (vehicle === 'car') { baseFare = 250; perKm = 80; }
+    setTotalFare(Math.round(baseFare + (21.1 * perKm)));
+  };
+
+  const handleConfirmBooking = () => {
+    setShowPaymentModal(false);
+    setBookingConfirmed(true);
   };
 
   return (
-    <div className="space-y-4">
-      {/* असली गूगल/ओपनस्ट्रीट मैप और रोड नेविगेशन डिस्प्ले */}
-      <div className="relative w-full h-56 bg-slate-900 text-white rounded-2xl overflow-hidden shadow-xl border border-slate-700 flex flex-col justify-between p-3">
-        {/* मैप हेडर / स्टेटस */}
-        <div className="flex items-center justify-between text-xs bg-slate-800/90 p-2 rounded-xl border border-slate-700 z-10">
-          <span className="flex items-center gap-1 text-emerald-400 font-bold">
-            <Navigation className="w-4 h-4 animate-spin" /> लाइव रोड GPS चालू
-          </span>
-          <span className="text-yellow-300 font-bold">{distance} किमी (सड़क मार्ग)</span>
+    <div style={{ position: 'relative', width: '100vw', height: '100vh', fontFamily: 'sans-serif', overflowY: 'auto', background: '#f8fafc', boxSizing: 'border-box' }}>
+      
+      {/* टॉप हेडर */}
+      <div style={{ background: '#dc2626', color: '#fff', padding: '12px 15px', display: 'flex', justifyContent: 'space-between', alignItems: 'center', zIndex: 1000, position: 'sticky', top: 0 }}>
+        <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+          <span style={{ background: '#fff', color: '#dc2626', padding: '4px 8px', borderRadius: '4px', fontWeight: 'bold' }}>HN</span>
+          <span style={{ fontSize: '18px', fontWeight: 'bold' }}>Hello Nepal</span>
         </div>
-
-        {/* सिमुलेटेड विजुअल रोड मैप लेयर (चूंकि यह React कॉम्पोनेंट है, यह सड़क और नेविगेशन दिखाएगा) */}
-        <div className="absolute inset-0 top-14 bg-[radial-gradient(#334155_1px,transparent_1px)] [background-size:16px_16px] bg-slate-950 flex flex-col items-center justify-center p-4 text-center">
-          <div className="w-full h-1.5 bg-slate-700 relative rounded-full overflow-hidden my-3">
-            <div className="absolute inset-0 bg-blue-500 animate-pulse w-3/4"></div>
-          </div>
-          <div className="text-xs text-slate-300 font-semibold flex items-center gap-1 mb-1">
-            <MapPin className="w-3.5 h-3.5 text-red-500" /> {pickup} से {dropoff} का पक्का रास्ता
-          </div>
-          {routeCoordinates.length > 0 ? (
-            <div className="text-[11px] text-emerald-400 bg-slate-900/90 px-3 py-1.5 rounded-lg border border-emerald-500/30">
-              ✓ सड़क का नक्शा और टर्न-बाय-टर्न रूट लोड हो गया!
-            </div>
-          ) : (
-            <div className="text-[11px] text-slate-400 animate-pulse">नेपाल रोड नेटवर्क लोड हो रहा है...</div>
-          )}
-        </div>
-
-        {/* राउटिंग के निर्देश (नौडियावा, पिपरैया आदि रास्ते के स्टॉप्स) */}
-        <div className="z-10 bg-slate-900/95 p-2 rounded-xl border border-slate-800 text-[11px] space-y-0.5">
-          <div className="font-bold text-yellow-400">📍 आगामी रोड निर्देश:</div>
-          {navigationSteps.length > 0 ? (
-            navigationSteps.map((step, i) => (
-              <div key={i} className="text-slate-300 truncate">• {step}</div>
-            ))
-          ) : (
-            <div className="text-slate-400">मुख्य सड़क का रास्ता खोजा जा रहा है...</div>
-          )}
-        </div>
-
-        {/* ज़ूम बटन */}
-        <div className="absolute bottom-16 right-3 flex flex-col gap-1 z-[1000]">
-          <button
-            type="button"
-            onClick={() => setZoomLevel((prev) => Math.min(prev + 1, 18))}
-            className="w-7 h-7 bg-slate-800 text-white rounded-lg shadow flex items-center justify-center font-bold border border-slate-600"
-          >
-            <Plus className="w-3.5 h-3.5" />
-          </button>
-          <button
-            type="button"
-            onClick={() => setZoomLevel((prev) => Math.max(prev - 1, 5))}
-            className="w-7 h-7 bg-slate-800 text-white rounded-lg shadow flex items-center justify-center font-bold border border-slate-600"
-          >
-            <Minus className="w-3.5 h-3.5" />
-          </button>
+        <div style={{ display: 'flex', gap: '15px', fontSize: '14px', fontWeight: 'bold' }}>
+          <span style={{ borderBottom: '2px solid #fff', paddingBottom: '2px' }}>राइड</span>
+          <span>मार्केट</span>
+          <span>केवाईसी</span>
+          <span>एडमिन</span>
         </div>
       </div>
 
-      {/* Ride Options */}
-      <div className="grid grid-cols-2 gap-2">
-        <button
-          type="button"
-          onClick={() => { setCurrentRide({ name: 'Hello Nepal Bike', rate: 25 }); }}
-          className={`p-3 rounded-2xl border text-left transition-all cursor-pointer ${currentRide.name === 'Hello Nepal Bike' ? 'border-red-600 bg-red-50/50 shadow-sm' : 'border-gray-200'}`}
-        >
-          <div className="font-black text-xs text-gray-800">🛵 Hello Nepal Bike</div>
-          <div className="text-[10px] text-gray-500 mt-0.5">तेज़ और किफायती</div>
-        </button>
-        <button
-          type="button"
-          onClick={() => { setCurrentRide({ name: 'Hello Nepal Auto', rate: 40 }); }}
-          className={`p-3 rounded-2xl border text-left transition-all cursor-pointer ${currentRide.name === 'Hello Nepal Auto' ? 'border-red-600 bg-red-50/50 shadow-sm' : 'border-gray-200'}`}
-        >
-          <div className="font-black text-xs text-gray-800">🛺 Hello Nepal Auto</div>
-          <div className="text-[10px] text-gray-500 mt-0.5">परिवार के लिए सुरक्षित</div>
-        </button>
+      {/* रूट स्टेटस बार */}
+      <div style={{ background: '#fff', padding: '8px 15px', borderBottom: '1px solid #e2e8f0', fontSize: '13px', fontWeight: 'bold', color: '#334155' }}>
+        <span>📍 रूट: {pickup} ➔ {dropoff}</span>
       </div>
 
-      {/* Ride Details & Booking */}
-      <div className="space-y-2.5 pt-2 border-t border-gray-100">
-        <div className="flex items-center justify-between text-xs">
-          <span className="text-gray-500">कुल सड़क दूरी:</span>
-          <span className="font-bold text-gray-800">{distance} किमी (km)</span>
-        </div>
-        <div className="flex items-center justify-between text-xs">
-          <span className="text-gray-500">कुल किराया राशि:</span>
-          <span className="font-extrabold text-sm text-red-600">Rs. {calculatedFare} NPR</span>
-        </div>
+      {/* मैप */}
+      <div ref={mapContainer} style={{ width: '100%', height: '32vh', zIndex: 1 }} />
 
-        {bookingStatus === 'idle' && (
-          <button
-            type="button"
-            onClick={handleBookRide}
-            className="w-full py-3.5 bg-red-600 hover:bg-red-700 text-white rounded-2xl font-black text-sm shadow-lg flex items-center justify-center gap-2 cursor-pointer transition-transform active:scale-95"
+      {/* कंट्रोल पैनल */}
+      <div style={{ padding: '15px', background: '#ffffff', borderTopLeftRadius: '22px', borderTopRightRadius: '22px', boxShadow: '0 -4px 20px rgba(0,0,0,0.1)', boxSizing: 'border-box', paddingBottom: '40px' }}>
+        
+        {/* वाहन चयन के 3 स्पष्ट विकल्प: बाइक, ऑटो और जीप/कार */}
+        <div style={{ display: 'flex', gap: '8px', marginBottom: '12px' }}>
+          <div 
+            onClick={() => { setVehicle('bike'); handleFindRoute(); }} 
+            style={{ flex: 1, padding: '10px 4px', background: vehicle === 'bike' ? '#fef2f2' : '#f8fafc', border: vehicle === 'bike' ? '2px solid #dc2626' : '1px solid #e2e8f0', borderRadius: '10px', cursor: 'pointer', textAlign: 'center' }}
           >
-            तुरंत {currentRide.name} बुक करें <ArrowRight className="w-4 h-4" />
-          </button>
-        )}
-
-        {bookingStatus === 'searching' && (
-          <div className="w-full py-3.5 bg-gray-100 text-gray-700 rounded-2xl font-bold text-xs text-center flex items-center justify-center gap-2 animate-pulse">
-            <div className="w-4 h-4 border-2 border-red-600 border-t-transparent rounded-full animate-spin"></div>
-            {pickup} से ड्राइवर की तलाश की जा रही है...
+            <div style={{ fontSize: '18px' }}>🏍️</div>
+            <div style={{ fontSize: '11px', fontWeight: 'bold', color: '#1e293b' }}>Hello Bike</div>
+            <div style={{ fontSize: '9px', color: '#64748b' }}>किफायती</div>
           </div>
-        )}
 
-        {bookingStatus === 'confirmed' && (
-          <div className="w-full p-3.5 bg-emerald-50 border border-emerald-200 rounded-2xl text-center space-y-2">
-            <div className="flex items-center justify-center gap-1 text-emerald-600 font-bold text-xs">
-              <CheckCircle2 className="w-4 h-4" /> ड्राइवर कन्फर्म हो गया!
+          <div 
+            onClick={() => { setVehicle('auto'); handleFindRoute(); }} 
+            style={{ flex: 1, padding: '10px 4px', background: vehicle === 'auto' ? '#fef2f2' : '#f8fafc', border: vehicle === 'auto' ? '2px solid #dc2626' : '1px solid #e2e8f0', borderRadius: '10px', cursor: 'pointer', textAlign: 'center' }}
+          >
+            <div style={{ fontSize: '18px' }}>🛺</div>
+            <div style={{ fontSize: '11px', fontWeight: 'bold', color: '#1e293b' }}>Hello Auto</div>
+            <div style={{ fontSize: '9px', color: '#64748b' }}>सुरक्षित</div>
+          </div>
+
+          <div 
+            onClick={() => { setVehicle('car'); handleFindRoute(); }} 
+            style={{ flex: 1, padding: '10px 4px', background: vehicle === 'car' ? '#fef2f2' : '#f8fafc', border: vehicle === 'car' ? '2px solid #dc2626' : '1px solid #e2e8f0', borderRadius: '10px', cursor: 'pointer', textAlign: 'center' }}
+          >
+            <div style={{ fontSize: '18px' }}>🚙</div>
+            <div style={{ fontSize: '11px', fontWeight: 'bold', color: '#1e293b' }}>Hello Jeep</div>
+            <div style={{ fontSize: '9px', color: '#64748b' }}>आरामदायक</div>
+          </div>
+        </div>
+
+        {/* पिकअप इनपुट */}
+        <div style={{ marginBottom: '8px' }}>
+          <label style={{ fontSize: '11px', color: '#64748b', fontWeight: 'bold' }}>🟢 कहाँ से (Pickup):</label>
+          <input type="text" value={pickup} onChange={(e) => setPickup(e.target.value)} placeholder="Bairahawa..." style={{ width: '100%', padding: '9px', borderRadius: '8px', border: '1px solid #cbd5e1', marginTop: '2px', fontSize: '14px', boxSizing: 'border-box' }} />
+        </div>
+
+        {/* ड्रॉपऑफ इनपुट */}
+        <div style={{ marginBottom: '10px' }}>
+          <label style={{ fontSize: '11px', color: '#64748b', fontWeight: 'bold' }}>🔴 कहाँ जाना है (Dropoff):</label>
+          <input type="text" value={dropoff} onChange={(e) => setDropoff(e.target.value)} placeholder="Butwal..." style={{ width: '100%', padding: '9px', borderRadius: '8px', border: '1px solid #cbd5e1', marginTop: '2px', fontSize: '14px', boxSizing: 'border-box' }} />
+        </div>
+
+        <button onClick={handleFindRoute} style={{ width: '100%', background: '#2563eb', color: '#fff', border: 'none', padding: '10px', borderRadius: '8px', fontSize: '13px', fontWeight: 'bold', cursor: 'pointer', marginBottom: '10px' }}>
+          {loading ? 'रूट खोजा जा रहा है...' : '🔄 सड़क रूट और किराया रीफ्रेश करें'}
+        </button>
+
+        {/* दूरी और किराया */}
+        <div style={{ background: '#f8fafc', padding: '10px', borderRadius: '10px', border: '1px solid #e2e8f0', marginBottom: '10px' }}>
+          <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: '4px', fontSize: '13px', color: '#334155' }}>
+            <span>{routeInfo}</span>
+          </div>
+          <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '14px', color: '#16a34a', fontWeight: 'bold' }}>
+            <span>कुल किराया राशि ({vehicle.toUpperCase()}):</span>
+            <span>Rs. {totalFare} NPR</span>
+          </div>
+        </div>
+
+        {/* बुकिंग बटन */}
+        {!bookingConfirmed ? (
+          <button onClick={() => setShowPaymentModal(true)} style={{ width: '100%', background: '#dc2626', color: '#fff', border: 'none', padding: '12px', borderRadius: '10px', fontSize: '14px', fontWeight: 'bold', cursor: 'pointer' }}>
+            🚗 {vehicle === 'bike' ? 'Hello Bike' : vehicle === 'auto' ? 'Hello Auto' : 'Hello Jeep'} बुक करें →
+          </button>
+        ) : (
+          <div style={{ padding: '12px', background: '#f0fdf4', border: '1px solid #bbf7d0', borderRadius: '10px' }}>
+            <div style={{ color: '#15803d', fontWeight: 'bold', fontSize: '14px', marginBottom: '4px' }}>✅ राइड बुक हो गई! ड्राइवर आ रहा है।</div>
+            <div style={{ fontSize: '12px', color: '#1e293b', marginBottom: '6px' }}>
+              <b>{assignedDriver.name}</b> ({assignedDriver.vehicleNo}) - मो: {assignedDriver.phone}<br/>
+              {dropoff} जाने के लिए {assignedDriver.eta} में आपके पास पहुंच रहा है।
             </div>
-            <p className="text-[11px] text-gray-600">Bishal Thapa (Lu 2 Pa 4590) - {dropoff} जाने के लिए 3 मिनट में आ रहा है</p>
-            
-            <button
-              type="button"
-              onClick={runSmartAIRouteCheck}
-              disabled={isCheckingAI}
-              className="w-full mt-1 py-2 bg-indigo-600 text-white text-xs font-bold rounded-xl flex items-center justify-center gap-2 shadow cursor-pointer"
-            >
-              {isCheckingAI ? (
-                <>
-                  <div className="w-3.5 h-3.5 border-2 border-white border-t-transparent rounded-full animate-spin"></div>
-                  रोड नेविगेशन जाँच हो रही है...
-                </>
-              ) : (
-                <>
-                  <Sparkles className="w-3.5 h-3.5 text-yellow-300" />
-                  AI रोड सेफ्टी और GPS जाँचें
-                </>
-              )}
-            </button>
-
-            <button
-              type="button"
-              onClick={() => setBookingStatus('idle')}
-              className="mt-1 px-3 py-1 bg-emerald-600 text-white text-[10px] font-bold rounded-lg cursor-pointer"
-            >
-              नई बुकिंग करें
+            <div style={{ fontSize: '12px', color: '#d97706', fontWeight: 'bold', marginBottom: '8px' }}>
+              💰 भुगतान का तरीका: {paymentMethod === 'cash' ? 'यात्रा के बाद ड्राइवर को नकद (Cash) दें' : paymentMethod.toUpperCase() + ' (ऑनलाइन)'}
+            </div>
+            <button onClick={() => setBookingConfirmed(false)} style={{ background: '#dc2626', color: '#fff', border: 'none', padding: '6px 12px', borderRadius: '6px', fontSize: '12px', fontWeight: 'bold', cursor: 'pointer', width: '100%' }}>
+              रद्द करें / नयी बुकिंग करें
             </button>
           </div>
         )}
       </div>
+
+      {/* पेमेंट और बुकिंग पॉपअप */}
+      {showPaymentModal && (
+        <div style={{ position: 'fixed', top: 0, left: 0, width: '100vw', height: '100vh', background: 'rgba(0,0,0,0.6)', zIndex: 2000, display: 'flex', justifyContent: 'center', alignItems: 'flex-end' }}>
+          <div style={{ background: '#fff', width: '100%', maxWidth: '500px', borderTopLeftRadius: '20px', borderTopRightRadius: '20px', padding: '20px', boxSizing: 'border-box' }}>
+            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '15px' }}>
+              <h3 style={{ margin: 0, fontSize: '17px', color: '#1e293b' }}>भुगतान का तरीका चुनें (Payment Option)</h3>
+              <button onClick={() => setShowPaymentModal(false)} style={{ background: 'none', border: 'none', fontSize: '18px', cursor: 'pointer', fontWeight: 'bold' }}>✕</button>
+            </div>
+
+            <div style={{ background: '#f8fafc', padding: '10px 15px', borderRadius: '8px', marginBottom: '15px', display: 'flex', justifyContent: 'space-between', fontWeight: 'bold', fontSize: '15px' }}>
+              <span>कुल देय किराया ({vehicle.toUpperCase()}):</span>
+              <span style={{ color: '#16a34a' }}>Rs. {totalFare} NPR</span>
+            </div>
+
+            <div style={{ display: 'flex', flexDirection: 'column', gap: '8px', marginBottom: '20px' }}>
+              <label style={{ display: 'flex', alignItems: 'center', gap: '10px', padding: '10px', border: paymentMethod === 'cash' ? '2px solid #2563eb' : '1px solid #cbd5e1', borderRadius: '8px', cursor: 'pointer' }}>
+                <input type="radio" name="pay" checked={paymentMethod === 'cash'} onChange={() => setPaymentMethod('cash')} />
+                <span style={{ fontWeight: 'bold', fontSize: '14px' }}>💵 यात्रा के बाद ड्राइवर को नकद दें (Cash on Ride)</span>
+              </label>
+
+              <label style={{ display: 'flex', alignItems: 'center', gap: '10px', padding: '10px', border: paymentMethod === 'esewa' ? '2px solid #16a34a' : '1px solid #cbd5e1', borderRadius: '8px', cursor: 'pointer' }}>
+                <input type="radio" name="pay" checked={paymentMethod === 'esewa'} onChange={() => setPaymentMethod('esewa')} />
+                <span style={{ fontWeight: 'bold', fontSize: '14px' }}>🟢 eSewa (डिजिटल वालेट)</span>
+              </label>
+
+              <label style={{ display: 'flex', alignItems: 'center', gap: '10px', padding: '10px', border: paymentMethod === 'khalti' ? '2px solid #5d2e8c' : '1px solid #cbd5e1', borderRadius: '8px', cursor: 'pointer' }}>
+                <input type="radio" name="pay" checked={paymentMethod === 'khalti'} onChange={() => setPaymentMethod('khalti')} />
+                <span style={{ fontWeight: 'bold', fontSize: '14px' }}>🟣 Khalti Digital Wallet</span>
+              </label>
+
+              <label style={{ display: 'flex', alignItems: 'center', gap: '10px', padding: '10px', border: paymentMethod === 'nabil' ? '2px solid #dc2626' : '1px solid #cbd5e1', borderRadius: '8px', cursor: 'pointer' }}>
+                <input type="radio" name="pay" checked={paymentMethod === 'nabil'} onChange={() => setPaymentMethod('nabil')} />
+                <span style={{ fontWeight: 'bold', fontSize: '14px' }}>🔴 Nabil Bank / Mobile Banking</span>
+              </label>
+            </div>
+
+            <button onClick={handleConfirmBooking} style={{ width: '100%', background: '#16a34a', color: '#fff', border: 'none', padding: '12px', borderRadius: '8px', fontSize: '15px', fontWeight: 'bold', cursor: 'pointer' }}>
+              राइड कन्फर्म करें और ड्राइवर को बुलाएं
+            </button>
+          </div>
+        </div>
+      )}
+
     </div>
   );
-};
+}
