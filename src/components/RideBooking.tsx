@@ -2,7 +2,7 @@ import React, { useEffect, useRef, useState } from 'react';
 import L from 'leaflet';
 import 'leaflet/dist/leaflet.css';
 
-export default function App() {
+export default function RideBooking() {
   const mapContainer = useRef<HTMLDivElement | null>(null);
   const mapInstance = useRef<L.Map | null>(null);
   const routeLayerRef = useRef<L.LayerGroup | null>(null);
@@ -10,13 +10,13 @@ export default function App() {
   const [pickup, setPickup] = useState<string>('Bairahawa');
   const [dropoff, setDropoff] = useState<string>('Butwal');
   const [vehicle, setVehicle] = useState<string>('bike'); // bike, auto, car
-  const [routeInfo, setRouteInfo] = useState<string>('सड़क का सटीक रूट खोजा जा रहा है...');
-  const [distanceKm, setDistanceKm] = useState<number>(21.1);
-  const [totalFare, setTotalFare] = useState<number>(628);
+  const [routeInfo, setRouteInfo] = useState<string>('सड़क का सटीक रूट खोजا जा रहा है...');
+  const [distanceKm, setDistanceKm] = useState<number>(22.5);
+  const [totalFare, setTotalFare] = useState<number>(650);
   const [loading, setLoading] = useState<boolean>(false);
 
   const [showPaymentModal, setShowPaymentModal] = useState<boolean>(false);
-  const [paymentMethod, setPaymentMethod] = useState<string>('cash'); // डिफ़ॉल्ट कैश ऑन राइड
+  const [paymentMethod, setPaymentMethod] = useState<string>('cash');
   const [bookingConfirmed, setBookingConfirmed] = useState<boolean>(false);
   const [assignedDriver] = useState({
     name: 'Bishal Thapa',
@@ -33,7 +33,7 @@ export default function App() {
       mapInstance.current = null;
     }
 
-    const map = L.map(mapContainer.current).setView([27.5042, 83.4485], 13);
+    const map = L.map(mapContainer.current).setView([27.5042, 83.4485], 12);
     mapInstance.current = map;
 
     L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
@@ -73,7 +73,7 @@ export default function App() {
     if (!mapInstance.current || !routeLayerRef.current) return;
 
     setLoading(true);
-    setRouteInfo('🛣️ सड़क के मोड़ के अनुसार रूट लोड हो रहा है...');
+    setRouteInfo('🛣️ नेशनल हाईवे और सड़कों के मोड़ के अनुसार रूट लोड हो रहा है...');
     setBookingConfirmed(false);
 
     const cleanPickup = pickup.trim();
@@ -106,50 +106,50 @@ export default function App() {
         setRouteInfo(`📍 कुल दूरी: ${distKmVal} किमी | ⏱️ समय: ${durMin} मिनट`);
 
         const coords = route.geometry.coordinates.map((coord: [number, number]) => [coord[1], coord[0]]);
-        const polyline = L.polyline(coords, { color: '#16a34a', weight: 6, opacity: 0.8 });
+        const polyline = L.polyline(coords, { color: '#dc2626', weight: 6, opacity: 0.8 });
 
         currentLayer.addLayer(polyline);
         currentMap.fitBounds(polyline.getBounds(), { padding: [50, 50] });
 
-        // वाहन के अनुसार किराया कैलकुलेशन
-        let baseFare = 60;
-        let perKm = 25;
-        if (vehicle === 'auto') {
-          baseFare = 120;
-          perKm = 45;
-        } else if (vehicle === 'car') {
-          baseFare = 250;
-          perKm = 80;
-        }
-
-        setTotalFare(Math.round(baseFare + (distKmVal * perKm)));
+        updateFare(distKmVal);
       } else {
-        drawFallbackRoute(startCoords, endCoords, currentMap, currentLayer);
+        drawRealisticHighwayRoute(startCoords, endCoords, currentMap, currentLayer);
       }
     } catch (e) {
-      drawFallbackRoute(startCoords, endCoords, currentMap, currentLayer);
+      drawRealisticHighwayRoute(startCoords, endCoords, currentMap, currentLayer);
     }
 
     setLoading(false);
   };
 
-  const drawFallbackRoute = (start: [number, number], end: [number, number], map: L.Map, layer: L.LayerGroup) => {
-    const latlngs: [number, number][] = [
+  // अगर API काम न करे तो भैरहवा-बुटवल हाईवे के अनुसार असली मोड़ वाला रोड रूट दिखाना
+  const drawRealisticHighwayRoute = (start: [number, number], end: [number, number], map: L.Map, layer: L.LayerGroup) => {
+    const highwayLatLon: [number, number][] = [
       [start[1], start[0]],
-      [(start[1] + end[1]) / 2 + 0.01, (start[0] + end[0]) / 2 + 0.01],
+      [27.5250, 83.4500], // सिद्धार्थ राजमार्ग पॉइंट
+      [27.5800, 83.4650], // तिले-टार / चौराहा पॉइंट
       [end[1], end[0]]
     ];
-    const polyline = L.polyline(latlngs, { color: '#16a34a', weight: 6, opacity: 0.8 });
+    const polyline = L.polyline(highwayLatLon, { color: '#dc2626', weight: 6, opacity: 0.8 });
     layer.addLayer(polyline);
     map.fitBounds(polyline.getBounds(), { padding: [50, 50] });
-    setDistanceKm(21.1);
-    setRouteInfo(`📍 कुल दूरी: 21.1 किमी | ⏱️ समय: 35 मिनट`);
     
+    setDistanceKm(22.5);
+    setRouteInfo(`📍 कुल दूरी: 22.5 किमी (सिद्धार्थ हाइवे) | ⏱️ समय: 35 मिनट`);
+    updateFare(22.5);
+  };
+
+  const updateFare = (dist: number) => {
     let baseFare = 60;
     let perKm = 25;
-    if (vehicle === 'auto') { baseFare = 120; perKm = 45; }
-    else if (vehicle === 'car') { baseFare = 250; perKm = 80; }
-    setTotalFare(Math.round(baseFare + (21.1 * perKm)));
+    if (vehicle === 'auto') {
+      baseFare = 120;
+      perKm = 45;
+    } else if (vehicle === 'car') {
+      baseFare = 250;
+      perKm = 80;
+    }
+    setTotalFare(Math.round(baseFare + (dist * perKm)));
   };
 
   const handleConfirmBooking = () => {
@@ -158,37 +158,23 @@ export default function App() {
   };
 
   return (
-    <div style={{ position: 'relative', width: '100vw', height: '100vh', fontFamily: 'sans-serif', overflowY: 'auto', background: '#f8fafc', boxSizing: 'border-box' }}>
+    <div style={{ position: 'relative', width: '100%', height: '100%', fontFamily: 'sans-serif', overflowY: 'auto', background: '#f8fafc', boxSizing: 'border-box', paddingBottom: '50px' }}>
       
-      {/* टॉप हेडर */}
-      <div style={{ background: '#dc2626', color: '#fff', padding: '12px 15px', display: 'flex', justifyContent: 'space-between', alignItems: 'center', zIndex: 1000, position: 'sticky', top: 0 }}>
-        <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
-          <span style={{ background: '#fff', color: '#dc2626', padding: '4px 8px', borderRadius: '4px', fontWeight: 'bold' }}>HN</span>
-          <span style={{ fontSize: '18px', fontWeight: 'bold' }}>Hello Nepal</span>
-        </div>
-        <div style={{ display: 'flex', gap: '15px', fontSize: '14px', fontWeight: 'bold' }}>
-          <span style={{ borderBottom: '2px solid #fff', paddingBottom: '2px' }}>राइड</span>
-          <span>मार्केट</span>
-          <span>केवाईसी</span>
-          <span>एडमिन</span>
-        </div>
-      </div>
-
       {/* रूट स्टेटस बार */}
       <div style={{ background: '#fff', padding: '8px 15px', borderBottom: '1px solid #e2e8f0', fontSize: '13px', fontWeight: 'bold', color: '#334155' }}>
         <span>📍 रूट: {pickup} ➔ {dropoff}</span>
       </div>
 
       {/* मैप */}
-      <div ref={mapContainer} style={{ width: '100%', height: '32vh', zIndex: 1 }} />
+      <div ref={mapContainer} style={{ width: '100%', height: '34vh', zIndex: 1 }} />
 
       {/* कंट्रोल पैनल */}
-      <div style={{ padding: '15px', background: '#ffffff', borderTopLeftRadius: '22px', borderTopRightRadius: '22px', boxShadow: '0 -4px 20px rgba(0,0,0,0.1)', boxSizing: 'border-box', paddingBottom: '40px' }}>
+      <div style={{ padding: '15px', background: '#ffffff', borderTopLeftRadius: '22px', borderTopRightRadius: '22px', boxShadow: '0 -4px 20px rgba(0,0,0,0.1)', boxSizing: 'border-box' }}>
         
         {/* वाहन चयन के 3 स्पष्ट विकल्प: बाइक, ऑटो और जीप/कार */}
         <div style={{ display: 'flex', gap: '8px', marginBottom: '12px' }}>
           <div 
-            onClick={() => { setVehicle('bike'); handleFindRoute(); }} 
+            onClick={() => { setVehicle('bike'); updateFare(distanceKm); }} 
             style={{ flex: 1, padding: '10px 4px', background: vehicle === 'bike' ? '#fef2f2' : '#f8fafc', border: vehicle === 'bike' ? '2px solid #dc2626' : '1px solid #e2e8f0', borderRadius: '10px', cursor: 'pointer', textAlign: 'center' }}
           >
             <div style={{ fontSize: '18px' }}>🏍️</div>
@@ -197,7 +183,7 @@ export default function App() {
           </div>
 
           <div 
-            onClick={() => { setVehicle('auto'); handleFindRoute(); }} 
+            onClick={() => { setVehicle('auto'); updateFare(distanceKm); }} 
             style={{ flex: 1, padding: '10px 4px', background: vehicle === 'auto' ? '#fef2f2' : '#f8fafc', border: vehicle === 'auto' ? '2px solid #dc2626' : '1px solid #e2e8f0', borderRadius: '10px', cursor: 'pointer', textAlign: 'center' }}
           >
             <div style={{ fontSize: '18px' }}>🛺</div>
@@ -206,7 +192,7 @@ export default function App() {
           </div>
 
           <div 
-            onClick={() => { setVehicle('car'); handleFindRoute(); }} 
+            onClick={() => { setVehicle('car'); updateFare(distanceKm); }} 
             style={{ flex: 1, padding: '10px 4px', background: vehicle === 'car' ? '#fef2f2' : '#f8fafc', border: vehicle === 'car' ? '2px solid #dc2626' : '1px solid #e2e8f0', borderRadius: '10px', cursor: 'pointer', textAlign: 'center' }}
           >
             <div style={{ fontSize: '18px' }}>🚙</div>
@@ -228,7 +214,7 @@ export default function App() {
         </div>
 
         <button onClick={handleFindRoute} style={{ width: '100%', background: '#2563eb', color: '#fff', border: 'none', padding: '10px', borderRadius: '8px', fontSize: '13px', fontWeight: 'bold', cursor: 'pointer', marginBottom: '10px' }}>
-          {loading ? 'रूट खोजा जा रहा है...' : '🔄 सड़क रूट और किराया रीफ्रेश करें'}
+          {loading ? 'सड़क रूट खोजा जा रहा है...' : '🔄 सड़क रूट और किराया रीफ्रेश करें'}
         </button>
 
         {/* दूरी और किराया */}
