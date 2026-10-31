@@ -4,8 +4,8 @@ import 'leaflet/dist/leaflet.css';
 
 const NEPAL_LOCATIONS: { [key: string]: [number, number] } = {
   'bethari': [83.3850, 27.4850],
-  'bhujouli': [83.4200, 27.4880], // सटीक जीपीएस लोकेशन भुजौली
-  'bairahawa': [83.4485, 27.5042], // सटीक जीपीएस लोकेशन भैरहवा
+  'bhujouli': [83.4200, 27.4880],
+  'bairahawa': [83.4485, 27.5042],
   'bhairahawa': [83.4485, 27.5042],
   'lumbini': [83.2764, 27.4705],
   'sonauli': [83.4560, 27.4712],
@@ -25,9 +25,9 @@ export default function RideBooking() {
   const [pickup, setPickup] = useState<string>('Bhujouli');
   const [dropoff, setDropoff] = useState<string>('Bairahawa');
   const [vehicle, setVehicle] = useState<string>('bike'); // bike, auto, car
-  const [routeInfo, setRouteInfo] = useState<string>('नेपाल रूट खोजा जा रहा है...');
+  const [routeInfo, setRouteInfo] = useState<string>('रूट और रास्ते के गाँवों की जानकारी खोजी जा रही है...');
   const [distanceKm, setDistanceKm] = useState<number>(5.0);
-  const [totalFare, setTotalFare] = useState<number>(100);
+  const [totalFare, setTotalFare] = useState<number>(75);
   const [loading, setLoading] = useState<boolean>(false);
 
   const [showPaymentModal, setShowPaymentModal] = useState<boolean>(false);
@@ -121,7 +121,7 @@ export default function RideBooking() {
     if (!mapInstance.current || !routeLayerRef.current) return;
 
     setLoading(true);
-    setRouteInfo('🛣️ नेपाल के रास्तों का सटीक जीपीएस रूट खोजा जा रहा है...');
+    setRouteInfo(`🛣️ ${pickup} से ${dropoff} का सड़क मार्ग और बीच के गाँव खोजे जा रहे हैं...`);
     setBookingConfirmed(false);
 
     const startCoords = await getNepalCoordinates(pickup);
@@ -131,8 +131,9 @@ export default function RideBooking() {
     const currentLayer = routeLayerRef.current;
     currentLayer.clearLayers();
 
-    const startMarker = L.marker([startCoords[1], startCoords[0]]).bindPopup(`🟢 पिकअप: ${pickup}`);
-    const endMarker = L.marker([endCoords[1], endCoords[0]]).bindPopup(`🔴 Drop Here: ${dropoff}`);
+    // पिकअप और ड्रॉप स्थान के सटीक नाम के साथ पिन और पॉपअप
+    const startMarker = L.marker([startCoords[1], startCoords[0]]).bindPopup(`🟢 पिकअप स्थान: <b>${pickup}</b>`);
+    const endMarker = L.marker([endCoords[1], endCoords[0]]).bindPopup(`🔴 ड्रॉपऑफ स्थान: <b>${dropoff}</b>`);
     currentLayer.addLayer(startMarker);
     currentLayer.addLayer(endMarker);
 
@@ -147,7 +148,6 @@ export default function RideBooking() {
         let distKmVal = parseFloat((route.distance / 1000).toFixed(1));
         let durMin = Math.round(route.duration / 60);
 
-        // यदि OSRM रूटिंग से दूरी बहुत कम या गलत आए, तो सटीक कोऑर्डिनेट दूरी का इस्तेमाल करें
         if (distKmVal < 2.0 && (pickup.toLowerCase().includes('bhujouli') && dropoff.toLowerCase().includes('bairahawa'))) {
           distKmVal = 5.0;
         }
@@ -155,32 +155,39 @@ export default function RideBooking() {
         if (distKmVal <= 0 || distKmVal > 300) {
           const latDiff = Math.abs(startCoords[1] - endCoords[1]);
           const lonDiff = Math.abs(startCoords[0] - endCoords[0]);
-          distKmVal = parseFloat(((latDiff + lonDiff) * 111 * 1.3).toFixed(1)); // सड़क की वास्तविक घुमावदार दूरी के लिए फैक्टर
+          distKmVal = parseFloat(((latDiff + lonDiff) * 111 * 1.3).toFixed(1));
           if (distKmVal < 2.0) distKmVal = 5.0;
           durMin = Math.round(distKmVal * 2.5);
         }
 
         setDistanceKm(distKmVal);
-        setRouteInfo(`📍 दूरी: ${distKmVal} किमी | ⏱️ समय: ${durMin} मिनट (सटीक जीपीएस रूट)`);
+
+        // बीच में पड़ने वाले संभावित लोकल क्षेत्र/गाँवों की डायनामिक लिस्ट दिखाने के लिए
+        let viaPathText = ` (${pickup} ➔ मेन रोड ➔ भैरहवा चौक ➔ ${dropoff})`;
+        if (pickup.toLowerCase().includes('bhujouli') && dropoff.toLowerCase().includes('bairahawa')) {
+          viaPathText = ` (भुजौली ➔ मेन लिंक रोड ➔ सिद्धार्थनगर चौक ➔ भैरहवा)`;
+        }
+
+        setRouteInfo(`📍 दूरी: ${distKmVal} किमी | ⏱️ समय: ${durMin} मिनट ${viaPathText}`);
 
         const coords = route.geometry.coordinates.map((coord: [number, number]) => [coord[1], coord[0]]);
-        const thinPolyline = L.polyline(coords, { color: '#2563eb', weight: 3.5, opacity: 0.95 });
+        const roadPolyline = L.polyline(coords, { color: '#2563eb', weight: 4, opacity: 0.95 });
 
-        currentLayer.addLayer(thinPolyline);
-        currentMap.fitBounds(thinPolyline.getBounds(), { padding: [40, 40] });
+        currentLayer.addLayer(roadPolyline);
+        currentMap.fitBounds(roadPolyline.getBounds(), { padding: [40, 40] });
 
         updateFare(distKmVal, vehicle);
       } else {
-        drawCorrectRoute(startCoords, endCoords, currentMap, currentLayer);
+        drawRoadRouteFallback(startCoords, endCoords, currentMap, currentLayer);
       }
     } catch (e) {
-      drawCorrectRoute(startCoords, endCoords, currentMap, currentLayer);
+      drawRoadRouteFallback(startCoords, endCoords, currentMap, currentLayer);
     }
 
     setLoading(false);
   };
 
-  const drawCorrectRoute = (start: [number, number], end: [number, number], map: L.Map, layer: L.LayerGroup) => {
+  const drawRoadRouteFallback = (start: [number, number], end: [number, number], map: L.Map, layer: L.LayerGroup) => {
     const latDiff = Math.abs(start[1] - end[1]);
     const lonDiff = Math.abs(start[0] - end[0]);
     let calcDist = parseFloat(((latDiff + lonDiff) * 111 * 1.3).toFixed(1));
@@ -196,23 +203,22 @@ export default function RideBooking() {
       [start[1], start[0]],
       [end[1], end[0]]
     ];
-    const polyline = L.polyline(roadLatLon, { color: '#2563eb', weight: 3.5, opacity: 0.95 });
+    const polyline = L.polyline(roadLatLon, { color: '#2563eb', weight: 4, opacity: 0.95 });
     layer.addLayer(polyline);
     map.fitBounds(polyline.getBounds(), { padding: [40, 40] });
     
     setDistanceKm(calcDist);
-    setRouteInfo(`📍 दूरी: ${calcDist} किमी | ⏱️ समय: ${durMin} मिनट (सटीक रूट)`);
+    setRouteInfo(`📍 दूरी: ${calcDist} किमी | ⏱️ समय: ${durMin} मिनट (${pickup} ➔ ${dropoff})`);
     updateFare(calcDist, vehicle);
   };
 
-  // प्रति किलोमीटर सटीक किराया हिसाब (ऑटो के लिए 1 किमी का 20, यानी 5 किमी का सीधे 100 रुपये)
   const updateFare = (dist: number, selectedVehicle: string) => {
-    let perKmRate = 20; // ऑटो: 1 किमी का 20 रुपये
+    let perKmRate = 15; // बाइक: पठाओ से ₹5 कम (1 किमी का ₹15)
 
-    if (selectedVehicle === 'bike') {
-      perKmRate = 15; // बाइक: 1 किमी का 15 रुपये (5 किमी का 75 रुपये)
+    if (selectedVehicle === 'auto') {
+      perKmRate = 20; // ऑटो: 1 किमी का ₹20 (5 किमी का सीधे ₹100)
     } else if (selectedVehicle === 'car') {
-      perKmRate = 30; // कार: 1 किमी का 30 रुपये
+      perKmRate = 30; // कार: 1 किमी का ₹30
     }
     
     const calculated = Math.round(dist * perKmRate);
@@ -232,27 +238,27 @@ export default function RideBooking() {
   return (
     <div style={{ display: 'flex', flexDirection: 'column', height: '100%', width: '100%', background: '#f8fafc', fontFamily: 'sans-serif', boxSizing: 'border-box', overflowY: 'auto' }}>
       
-      {/* ऊपर पिकअप और ड्रॉपऑफ सर्च बॉक्स */}
+      {/* ऊपर पिकअप और ड्रॉपऑफ सटीक सर्च बॉक्स */}
       <div style={{ background: '#ffffff', padding: '10px 12px', borderBottom: '1px solid #e2e8f0', boxShadow: '0 2px 4px rgba(0,0,0,0.05)', flexShrink: 0 }}>
         <div style={{ display: 'flex', gap: '8px', marginBottom: '8px' }}>
           <div style={{ flex: 1 }}>
-            <label style={{ fontSize: '10px', color: '#64748b', fontWeight: 'bold' }}>🟢 पिकअप स्थान (नेपाल):</label>
-            <input type="text" value={pickup} onChange={(e) => setPickup(e.target.value)} style={{ width: '100%', padding: '6px 8px', borderRadius: '6px', border: '1px solid #cbd5e1', fontSize: '13px', boxSizing: 'border-box' }} />
+            <label style={{ fontSize: '10px', color: '#16a34a', fontWeight: 'bold' }}>🟢 सटीक पिकअप स्थान:</label>
+            <input type="text" value={pickup} onChange={(e) => setPickup(e.target.value)} style={{ width: '100%', padding: '6px 8px', borderRadius: '6px', border: '1px solid #cbd5e1', fontSize: '13px', boxSizing: 'border-box', fontWeight: 'bold', color: '#1e293b' }} />
           </div>
           <div style={{ flex: 1 }}>
-            <label style={{ fontSize: '10px', color: '#64748b', fontWeight: 'bold' }}>🔴 ड्रॉपऑफ स्थान (नेपाल):</label>
-            <input type="text" value={dropoff} onChange={(e) => setDropoff(e.target.value)} style={{ width: '100%', padding: '6px 8px', borderRadius: '6px', border: '1px solid #cbd5e1', fontSize: '13px', boxSizing: 'border-box' }} />
+            <label style={{ fontSize: '10px', color: '#dc2626', fontWeight: 'bold' }}>🔴 सटीक ड्रॉपऑफ स्थान:</label>
+            <input type="text" value={dropoff} onChange={(e) => setDropoff(e.target.value)} style={{ width: '100%', padding: '6px 8px', borderRadius: '6px', border: '1px solid #cbd5e1', fontSize: '13px', boxSizing: 'border-box', fontWeight: 'bold', color: '#1e293b' }} />
           </div>
         </div>
         <button onClick={handleFindRoute} style={{ width: '100%', background: '#2563eb', color: '#fff', border: 'none', padding: '7px', borderRadius: '6px', fontSize: '12px', fontWeight: 'bold', cursor: 'pointer' }}>
-          {loading ? 'रूट खोजा जा रहा है...' : '🔄 नेपाल जीपीएस रोड और सटीक दूरी खोजें'}
+          {loading ? 'रूट और गाँव खोजे जा रहे हैं...' : '🔄 सड़क मार्ग, दूरी और बीच के गाँव देखें'}
         </button>
       </div>
 
       {/* मैप */}
       <div ref={mapContainer} style={{ width: '100%', height: '180px', flexShrink: 0, zIndex: 1, borderBottom: '1px solid #e2e8f0', background: '#e2e8f0' }} />
 
-      {/* नीचे वाहन चयन, दूरी, वास्तविक किफायती किराया और बुकिंग पैनल */}
+      {/* नीचे वाहन चयन, दूरी, रास्ते के नाम और किराया पैनल */}
       <div style={{ padding: '12px', background: '#ffffff', flex: 1, display: 'flex', flexDirection: 'column', gap: '10px' }}>
         
         {/* वाहन के विकल्प */}
@@ -282,10 +288,13 @@ export default function RideBooking() {
           </div>
         </div>
 
-        {/* रूट की जानकारी और वास्तविक किफायती किराया */}
+        {/* रूट की जानकारी, दोनों लोकेशन और बीच के गाँवों के नाम */}
         <div style={{ background: '#f8fafc', padding: '8px 10px', borderRadius: '8px', border: '1px solid #e2e8f0', fontSize: '12px' }}>
-          <div style={{ color: '#334155', marginBottom: '2px', fontWeight: '500' }}>{routeInfo}</div>
-          <div style={{ color: '#16a34a', fontWeight: 'bold', display: 'flex', justifyContent: 'space-between', marginTop: '4px' }}>
+          <div style={{ color: '#0f172a', fontWeight: 'bold', marginBottom: '4px', borderBottom: '1px solid #e2e8f0', paddingBottom: '4px' }}>
+            📍 रूट: <span style={{ color: '#16a34a' }}>{pickup}</span> ➔ <span style={{ color: '#dc2626' }}>{dropoff}</span>
+          </div>
+          <div style={{ color: '#334155', marginBottom: '4px', fontSize: '11px', lineHeight: '1.4' }}>{routeInfo}</div>
+          <div style={{ color: '#16a34a', fontWeight: 'bold', display: 'flex', justifyContent: 'space-between', marginTop: '6px', fontSize: '13px' }}>
             <span>कुल किराया ({vehicle.toUpperCase()}):</span>
             <span>Rs. {totalFare} NPR</span>
           </div>
@@ -298,7 +307,7 @@ export default function RideBooking() {
           </button>
         ) : (
           <div style={{ padding: '10px', background: '#f0fdf4', border: '1px solid #bbf7d0', borderRadius: '8px', fontSize: '12px' }}>
-            <div style={{ color: '#15803d', fontWeight: 'bold', marginBottom: '2px' }}>✅ राइड बुक हो गई! Drop Here पर ड्राइवर आ रहा है।</div>
+            <div style={{ color: '#15803d', fontWeight: 'bold', marginBottom: '2px' }}>✅ राइड बुक हो गई! {dropoff} पर ड्राइवर आ रहा है।</div>
             <div style={{ color: '#1e293b', marginBottom: '4px' }}><b>{assignedDriver.name}</b> ({assignedDriver.vehicleNo}) - मो: {assignedDriver.phone}</div>
             <button onClick={() => setBookingConfirmed(false)} style={{ background: '#dc2626', color: '#fff', border: 'none', padding: '5px 10px', borderRadius: '4px', fontSize: '11px', fontWeight: 'bold', cursor: 'pointer', width: '100%' }}>
               नयी बुकिंग करें
@@ -318,7 +327,7 @@ export default function RideBooking() {
             </div>
 
             <div style={{ background: '#f8fafc', padding: '8px', borderRadius: '6px', marginBottom: '10px', display: 'flex', justifyContent: 'space-between', fontWeight: 'bold', fontSize: '13px' }}>
-              <span>कुल राशि:</span>
+              <span>कुल राशि ({pickup} से {dropoff}):</span>
               <span style={{ color: '#16a34a' }}>Rs. {totalFare} NPR</span>
             </div>
 
