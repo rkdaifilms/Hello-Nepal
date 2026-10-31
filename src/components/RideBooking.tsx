@@ -22,7 +22,7 @@ export default function RideBooking() {
   const mapInstance = useRef<L.Map | null>(null);
   const routeLayerRef = useRef<L.LayerGroup | null>(null);
 
-  // 🗺️ localStorage से पुरानी सेव्ड लोकेशन लोड करना ताकि ऐप बंद होने या रीफ्रेश पर गायब न हो
+  // 🗺️ localStorage से लोकेशन लोड करना ताकि ऐप रीफ्रेश पर कभी न उड़े
   const [pickup, setPickup] = useState<string>(() => {
     return localStorage.getItem('hn_saved_pickup') || 'Bhujouli';
   });
@@ -31,7 +31,7 @@ export default function RideBooking() {
     return localStorage.getItem('hn_saved_dropoff') || 'Bairahawa';
   });
 
-  const [vehicle, setVehicle] = useState<string>('bike'); // bike, auto, car
+  const [vehicle, setVehicle] = useState<string>('bike'); 
   const [routeInfo, setRouteInfo] = useState<string>('रूट और रास्ते के गाँवों की जानकारी खोजी जा रही है...');
   const [distanceKm, setDistanceKm] = useState<number>(5.0);
   const [totalFare, setTotalFare] = useState<number>(75);
@@ -53,7 +53,7 @@ export default function RideBooking() {
     eta: '3 मिनट'
   });
 
-  // 💾 जैसे ही यूजर पिकअप या ड्रॉपऑफ बदले, उसे तुरंत ब्राउज़र स्टोरेज में सेव कर देना
+  // 💾 लोकेशन सेव करना
   useEffect(() => {
     localStorage.setItem('hn_saved_pickup', pickup);
   }, [pickup]);
@@ -65,40 +65,33 @@ export default function RideBooking() {
   useEffect(() => {
     if (!mapContainer.current) return;
 
-    if (mapInstance.current) {
-      mapInstance.current.remove();
-      mapInstance.current = null;
+    // अगर मैप पहले से बना है तो उसे दोबारा मत हटाओ, बस साइज ठीक करो ताकि सादा न दिखे
+    if (!mapInstance.current) {
+      const map = L.map(mapContainer.current, {
+        zoomControl: true,
+        fadeAnimation: true,
+        zoomAnimation: true
+      }).setView([27.5042, 83.4485], 13);
+
+      mapInstance.current = map;
+
+      L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
+        maxZoom: 19,
+        minZoom: 8,
+        attribution: '&copy; OpenStreetMap Nepal'
+      }).addTo(map);
+
+      const layerGroup = L.layerGroup().addTo(map);
+      routeLayerRef.current = layerGroup;
     }
-
-    const map = L.map(mapContainer.current, {
-      zoomControl: true,
-      fadeAnimation: true,
-      zoomAnimation: true
-    }).setView([27.5042, 83.4485], 13);
-
-    mapInstance.current = map;
-
-    L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
-      maxZoom: 19,
-      minZoom: 8,
-      attribution: '&copy; OpenStreetMap Nepal'
-    }).addTo(map);
-
-    const layerGroup = L.layerGroup().addTo(map);
-    routeLayerRef.current = layerGroup;
 
     handleFindRoute();
 
     setTimeout(() => {
-      map.invalidateSize();
-    }, 250);
-
-    return () => {
       if (mapInstance.current) {
-        mapInstance.current.remove();
-        mapInstance.current = null;
+        mapInstance.current.invalidateSize();
       }
-    };
+    }, 250);
   }, []);
 
   const getNepalCoordinates = async (placeName: string): Promise<[number, number]> => {
@@ -147,7 +140,6 @@ export default function RideBooking() {
     const currentLayer = routeLayerRef.current;
     currentLayer.clearLayers();
 
-    // पिकअप और ड्रॉप स्थान के सटीक नाम के साथ पिन और पॉपअप
     const startMarker = L.marker([startCoords[1], startCoords[0]]).bindPopup(`🟢 पिकअप स्थान: <b>${pickup}</b>`);
     const endMarker = L.marker([endCoords[1], endCoords[0]]).bindPopup(`🔴 ड्रॉपऑफ स्थान: <b>${dropoff}</b>`);
     currentLayer.addLayer(startMarker);
@@ -228,7 +220,7 @@ export default function RideBooking() {
   };
 
   const updateFare = (dist: number, selectedVehicle: string) => {
-    let perKmRate = 15; // बाइक: पठाओ से ₹5 कम
+    let perKmRate = 15; 
 
     if (selectedVehicle === 'auto') {
       perKmRate = 20; 
@@ -253,7 +245,6 @@ export default function RideBooking() {
   return (
     <div style={{ display: 'flex', flexDirection: 'column', height: '100%', width: '100%', background: '#f8fafc', fontFamily: 'sans-serif', boxSizing: 'border-box', overflowY: 'auto' }}>
       
-      {/* ऊपर पिकअप और ड्रॉपऑफ सटीक सर्च बॉक्स */}
       <div style={{ background: '#ffffff', padding: '10px 12px', borderBottom: '1px solid #e2e8f0', boxShadow: '0 2px 4px rgba(0,0,0,0.05)', flexShrink: 0 }}>
         <div style={{ display: 'flex', gap: '8px', marginBottom: '8px' }}>
           <div style={{ flex: 1 }}>
@@ -270,13 +261,10 @@ export default function RideBooking() {
         </button>
       </div>
 
-      {/* मैप */}
       <div ref={mapContainer} style={{ width: '100%', height: '180px', flexShrink: 0, zIndex: 1, borderBottom: '1px solid #e2e8f0', background: '#e2e8f0' }} />
 
-      {/* नीचे वाहन चयन, दूरी, रास्ते के नाम और किराया पैनल */}
       <div style={{ padding: '12px', background: '#ffffff', flex: 1, display: 'flex', flexDirection: 'column', gap: '10px' }}>
         
-        {/* वाहन के विकल्प */}
         <div style={{ display: 'flex', gap: '6px' }}>
           <div 
             onClick={() => handleVehicleChange('bike')} 
@@ -303,7 +291,6 @@ export default function RideBooking() {
           </div>
         </div>
 
-        {/* रूट की जानकारी */}
         <div style={{ background: '#f8fafc', padding: '8px 10px', borderRadius: '8px', border: '1px solid #e2e8f0', fontSize: '12px' }}>
           <div style={{ color: '#0f172a', fontWeight: 'bold', marginBottom: '4px', borderBottom: '1px solid #e2e8f0', paddingBottom: '4px' }}>
             📍 रूट: <span style={{ color: '#16a34a' }}>{pickup}</span> ➔ <span style={{ color: '#dc2626' }}>{dropoff}</span>
@@ -315,7 +302,6 @@ export default function RideBooking() {
           </div>
         </div>
 
-        {/* बुकिंग बटन */}
         {!bookingConfirmed ? (
           <button onClick={() => setShowPaymentModal(true)} style={{ width: '100%', background: '#dc2626', color: '#fff', border: 'none', padding: '10px', borderRadius: '8px', fontSize: '13px', fontWeight: 'bold', cursor: 'pointer' }}>
             🚗 {vehicle === 'bike' ? 'Hello Bike' : vehicle === 'auto' ? 'Hello Auto' : 'Hello Jeep'} बुक करें →
@@ -332,7 +318,6 @@ export default function RideBooking() {
 
       </div>
 
-      {/* पेमेंट और पेआउट सिस्टम मॉडल */}
       {showPaymentModal && (
         <div style={{ position: 'fixed', top: 0, left: 0, width: '100vw', height: '100vh', background: 'rgba(0,0,0,0.6)', zIndex: 2000, display: 'flex', justifyContent: 'center', alignItems: 'flex-end' }}>
           <div style={{ background: '#fff', width: '100%', maxWidth: '400px', borderTopLeftRadius: '16px', borderTopRightRadius: '16px', padding: '15px', boxSizing: 'border-box', maxHeight: '90vh', overflowY: 'auto' }}>
@@ -393,7 +378,7 @@ export default function RideBooking() {
 
               <label style={{ display: 'flex', alignItems: 'center', gap: '8px', padding: '8px', border: paymentMethod === 'khalti' ? '2px solid #5d2e8c' : '1px solid #cbd5e1', borderRadius: '6px', cursor: 'pointer' }}>
                 <input type="radio" name="pay" checked={paymentMethod === 'khalti'} onChange={() => setPaymentMethod('khalti')} />
-                <span style={{ fontWeight: 'bold' => '🟣 Khalti Wallet (रियल पेमेंट)</span>
+                <span style={{ fontWeight: 'bold' }}>🟣 Khalti Wallet (रियल पेमेंट)</span>
               </label>
             </div>
 
