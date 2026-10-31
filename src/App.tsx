@@ -2,7 +2,6 @@ import React, { useEffect, useRef, useState } from 'react';
 import mapboxgl from 'mapbox-gl';
 import 'mapbox-gl/dist/mapbox-gl.css';
 
-// तेरा Mapbox Access Token
 mapboxgl.accessToken = 'pk.eyJ1IjoicmtkYWlmaWxtcyIsImEiOiJjbXZveDdtOHUweGIyMnpxeGtxemJjODV5In0.2BCQn8iiApvGhcXV-ez8Vg';
 
 export default function App() {
@@ -11,7 +10,7 @@ export default function App() {
 
   const [pickup, setPickup] = useState('भैरहवा, नेपाल');
   const [dropoff, setDropoff] = useState('सुनौली, नेपाल');
-  const [routeInfo, setRouteInfo] = useState('रूट खोजने के लिए 'रास्ता खोजें' पर क्लिक करें');
+  const [routeInfo, setRouteInfo] = useState('रूट देखने के लिए नीचे बटन दबाएं');
 
   useEffect(() => {
     if (map.current) return;
@@ -20,91 +19,80 @@ export default function App() {
       map.current = new mapboxgl.Map({
         container: mapContainer.current,
         style: 'mapbox://styles/mapbox/streets-v12',
-        center: [83.4772, 27.5042], // भैरहवा का सेंटर
+        center: [83.4772, 27.5042],
         zoom: 13
       });
 
-      // मैप लोड होने पर डिफ़ॉल्ट रूट दिखाएं
       map.current.on('load', () => {
-        drawRoute([83.4772, 27.5042], [83.4550, 27.4710]); // भैरहवा से सुनौली के कोऑर्डिनेट्स
+        drawRoute([83.4772, 27.5042], [83.4550, 27.4710]);
       });
     }
   }, []);
 
-  // Mapbox Directions API से असली रास्ता (नीली लाइन) खींचने का फंक्शन
   const drawRoute = async (start: [number, number], end: [number, number]) => {
     if (!map.current) return;
 
-    const query = await fetch(
-      `https://api.mapbox.com/directions/v5/mapbox/driving/${start[0]},${start[1]};${end[0]},${end[1]}?geometries=geojson&access_key=${mapboxgl.accessToken}`
-    );
-    const json = await query.json();
-    
-    if (!json.routes || json.routes.length === 0) return;
+    try {
+      const query = await fetch(
+        `https://api.mapbox.com/directions/v5/mapbox/driving/${start[0]},${start[1]};${end[0]},${end[1]}?geometries=geojson&access_token=${mapboxgl.accessToken}`
+      );
+      const json = await query.json();
+      
+      if (!json.routes || json.routes.length === 0) return;
 
-    const data = json.routes[0];
-    const routeGeoJSON = data.geometry;
+      const data = json.routes[0];
+      const routeGeoJSON = data.geometry;
 
-    // दूरी और समय कैलकुलेट करें
-    const distanceKm = (data.distance / 1000).toFixed(1);
-    const durationMin = Math.round(data.duration / 60);
-    setRouteInfo(`दूरी: ${distanceKm} किमी | समय: ${durationMin} मिनट`);
+      const distanceKm = (data.distance / 1000).toFixed(1);
+      const durationMin = Math.round(data.duration / 60);
+      setRouteInfo(`दूरी: ${distanceKm} किमी | समय: ${durationMin} मिनट`);
 
-    // अगर पहले से रूट बना है तो उसे हटा दें
-    if (map.current.getSource('route')) {
-      (map.current.getSource('route') as mapboxgl.GeoJSONSource).setData({
-        type: 'Feature',
-        properties: {},
-        geometry: routeGeoJSON
-      });
-    } else {
-      // मैप पर नया नीला रास्ता जोड़ें
-      map.current.addSource('route', {
-        type: 'geojson',
-        data: {
+      if (map.current.getSource('route')) {
+        (map.current.getSource('route') as mapboxgl.GeoJSONSource).setData({
           type: 'Feature',
           properties: {},
           geometry: routeGeoJSON
-        }
-      });
+        });
+      } else {
+        map.current.addSource('route', {
+          type: 'geojson',
+          data: {
+            type: 'Feature',
+            properties: {},
+            geometry: routeGeoJSON
+          }
+        });
 
-      map.current.addLayer({
-        id: 'route',
-        type: 'line',
-        source: 'route',
-        layout: {
-          'line-join': 'round',
-          'line-cap': 'round'
-        },
-        paint: {
-          'line-color': '#2563eb', // चमकीला नीला रंग ताकि रोड साफ़ दिखे
-          'line-width': 5
-        }
-      });
+        map.current.addLayer({
+          id: 'route',
+          type: 'line',
+          source: 'route',
+          layout: {
+            'line-join': 'round',
+            'line-cap': 'round'
+          },
+          paint: {
+            'line-color': '#2563eb',
+            'line-width': 5
+          }
+        });
+      }
+
+      new mapboxgl.Marker({ color: '#10b981' }).setLngLat(start).addTo(map.current);
+      new mapboxgl.Marker({ color: '#ef4444' }).setLngLat(end).addTo(map.current);
+
+    } catch (error) {
+      console.error('Error fetching route:', error);
     }
-
-    // दोनों पॉइंट्स पर पिन लगाएं
-    new mapboxgl.Marker({ color: '#10b981' }).setLngLat(start).addTo(map.current);
-    new mapboxgl.Marker({ color: '#ef4444' }).setLngLat(end).addTo(map.current);
-
-    // मैप को रूट के हिसाब से फिट करें
-    const coordinates = routeGeoJSON.coordinates;
-    const bounds = coordinates.reduce((b: mapboxgl.LngLatBounds, coord: number[]) => {
-      return b.extend(coord as [number, number]);
-    }, new mapboxgl.LngLatBounds(coordinates[0], coordinates[0]));
-
-    map.current.fitBounds(bounds, { padding: 50 });
   };
 
   const handleFindRoute = () => {
-    // यहाँ भैरहवा और सुनौली के पक्के कोऑर्डिनेट्स पास किए गए हैं
     drawRoute([83.4772, 27.5042], [83.4550, 27.4710]);
   };
 
   return (
     <div style={{ position: 'relative', width: '100vw', height: '100vh', fontFamily: 'sans-serif', overflow: 'hidden' }}>
       
-      {/* मैप स्क्रीन (ऊपर का हिस्सा) */}
       <div 
         ref={mapContainer} 
         style={{ 
@@ -117,7 +105,6 @@ export default function App() {
         }} 
       />
 
-      {/* नीचे बुकिंग और नेविगेशन पैनल */}
       <div style={{
         position: 'absolute',
         bottom: '0',
