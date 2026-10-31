@@ -5,14 +5,14 @@ import 'mapbox-gl/dist/mapbox-gl.css';
 mapboxgl.accessToken = 'pk.eyJ1IjoicmtkYWlmaWxtcyIsImEiOiJjbXZveDdtOHUweGIyMnpxeGtxemJjODV5In0.2BCQn8iiApvGhcXV-ez8Vg';
 
 export default function App() {
-  const mapContainer = useRef(null);
-  const map = useRef(null);
-  const startMarker = useRef(null);
-  const endMarker = useRef(null);
+  const mapContainer = useRef<HTMLDivElement | null>(null);
+  const map = useRef<mapboxgl.Map | null>(null);
+  const startMarker = useRef<mapboxgl.Marker | null>(null);
+  const endMarker = useRef<mapboxgl.Marker | null>(null);
 
-  const [pickup, setPickup] = useState('भैरहवा, नेपाल');
-  const [dropoff, setDropoff] = useState('Lumbini, Nepal');
-  const [routeInfo, setRouteInfo] = useState('जगह का नाम लिखकर 'रास्ता खोजें' दबाएं');
+  const [pickup, setPickup] = useState<string>('भैरहवा, नेपाल');
+  const [dropoff, setDropoff] = useState<string>('Lumbini, Nepal');
+  const [routeInfo, setRouteInfo] = useState<string>('जगह का नाम लिखकर रास्ता खोजें दबाएं');
 
   useEffect(() => {
     if (map.current) return;
@@ -37,29 +37,26 @@ export default function App() {
     try {
       setRouteInfo('सटीक जीपीएस रूट खोजा जा रहा है...');
 
-      // 1. Pickup लोकेशन के कोऑर्डिनेट्स खोजें
       const pickupQuery = await fetch(
         `https://api.mapbox.com/geocoding/v5/mapbox.places/${encodeURIComponent(pickup)}.json?access_token=${mapboxgl.accessToken}&limit=1`
       );
       const pickupJson = await pickupQuery.json();
       if (!pickupJson.features || pickupJson.features.length === 0) {
-        setRouteInfo('पिकअप लोकेशन नहीं मिली! सही नाम लिखें।');
+        setRouteInfo('पिकअप लोकेशन नहीं मिली!');
         return;
       }
       const startCoord = pickupJson.features[0].center;
 
-      // 2. Dropoff लोकेशन के कोऑर्डिनेट्स खोजें
       const dropoffQuery = await fetch(
         `https://api.mapbox.com/geocoding/v5/mapbox.places/${encodeURIComponent(dropoff)}.json?access_token=${mapboxgl.accessToken}&limit=1`
       );
       const dropoffJson = await dropoffQuery.json();
       if (!dropoffJson.features || dropoffJson.features.length === 0) {
-        setRouteInfo('ड्रॉपऑफ लोकेशन नहीं मिली! सही नाम लिखें।');
+        setRouteInfo('ड्रॉपऑफ लोकेशन नहीं मिली!');
         return;
       }
       const endCoord = dropoffJson.features[0].center;
 
-      // 3. दोनों के बीच असली नेविगेशन रूट (Directions) निकालें
       const routeQuery = await fetch(
         `https://api.mapbox.com/directions/v5/mapbox/driving/${startCoord[0]},${startCoord[1]};${endCoord[0]},${endCoord[1]}?geometries=geojson&access_token=${mapboxgl.accessToken}`
       );
@@ -77,9 +74,8 @@ export default function App() {
       const durationMin = Math.round(data.duration / 60);
       setRouteInfo(`📍 दूरी: ${distanceKm} किमी | ⏱️ समय: ${durationMin} मिनट`);
 
-      // 4. मैप पर पुराना रूट हटाकर नया नीला रास्ता दिखाएं
       if (map.current.getSource('route')) {
-        map.current.getSource('route').setData({
+        (map.current.getSource('route') as mapboxgl.GeoJSONSource).setData({
           type: 'Feature',
           properties: {},
           geometry: routeGeoJSON
@@ -103,22 +99,20 @@ export default function App() {
             'line-cap': 'round'
           },
           paint: {
-            'line-color': '#2563eb', // चमकीला नीला जीपीएस रूट
+            'line-color': '#2563eb',
             'line-width': 6
           }
         });
       }
 
-      // पुराने पिन हटाकर नए मार्कर सेट करें
       if (startMarker.current) startMarker.current.remove();
       if (endMarker.current) endMarker.current.remove();
 
       startMarker.current = new mapboxgl.Marker({ color: '#10b981' }).setLngLat(startCoord).addTo(map.current);
       endMarker.current = new mapboxgl.Marker({ color: '#ef4444' }).setLngLat(endCoord).addTo(map.current);
 
-      // मैप को दोनों पॉइंट्स के हिसाब से ऑटोमेटिक फिट करें
       const coordinates = routeGeoJSON.coordinates;
-      const bounds = coordinates.reduce((b, coord) => {
+      const bounds = coordinates.reduce((b: mapboxgl.LngLatBounds, coord: [number, number]) => {
         return b.extend(coord);
       }, new mapboxgl.LngLatBounds(coordinates[0], coordinates[0]));
 
@@ -126,14 +120,12 @@ export default function App() {
 
     } catch (error) {
       console.error('Error:', error);
-      setRouteInfo('नेटवर्क एरर! कृपया दोबारा कोशिश करें।');
+      setRouteInfo('नेटवर्क एरर आया है!');
     }
   };
 
   return (
     <div style={{ position: 'relative', width: '100vw', height: '100vh', fontFamily: 'sans-serif', overflow: 'hidden' }}>
-      
-      {/* ऊपर पूरा मैप दिखेगा */}
       <div 
         ref={mapContainer} 
         style={{ 
@@ -146,7 +138,6 @@ export default function App() {
         }} 
       />
 
-      {/* नीचे बुकिंग, जीपीएस सर्च और नेविगेशन पैनल */}
       <div style={{
         position: 'absolute',
         bottom: '0',
@@ -172,7 +163,6 @@ export default function App() {
             type="text" 
             value={pickup} 
             onChange={(e) => setPickup(e.target.value)} 
-            placeholder="पिकअप जगह का नाम लिखें..."
             style={{ width: '100%', padding: '10px', borderRadius: '8px', border: '1px solid #cbd5e1', marginTop: '3px', fontSize: '14px', boxSizing: 'border-box' }}
           />
         </div>
@@ -183,7 +173,6 @@ export default function App() {
             type="text" 
             value={dropoff} 
             onChange={(e) => setDropoff(e.target.value)} 
-            placeholder="जाने वाली जगह का नाम लिखें..."
             style={{ width: '100%', padding: '10px', borderRadius: '8px', border: '1px solid #cbd5e1', marginTop: '3px', fontSize: '14px', boxSizing: 'border-box' }}
           />
         </div>
@@ -212,7 +201,6 @@ export default function App() {
           </div>
         )}
       </div>
-
     </div>
   );
 }
