@@ -22,7 +22,6 @@ export default function RideBooking() {
   const mapInstance = useRef<L.Map | null>(null);
   const routeLayerRef = useRef<L.LayerGroup | null>(null);
 
-  // 🗺️ localStorage से लोकेशन लोड करना ताकि ऐप रीफ्रेश पर कभी न उड़े
   const [pickup, setPickup] = useState<string>(() => {
     return localStorage.getItem('hn_saved_pickup') || 'Bhujouli';
   });
@@ -53,7 +52,6 @@ export default function RideBooking() {
     eta: '3 मिनट'
   });
 
-  // 💾 लोकेशन सेव करना
   useEffect(() => {
     localStorage.setItem('hn_saved_pickup', pickup);
   }, [pickup]);
