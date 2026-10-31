@@ -9,7 +9,6 @@ export const SupportChatbot: React.FC = () => {
   const [loading, setLoading] = useState(false);
   const [useOpenRouter, setUseOpenRouter] = useState(false);
 
-  // Yeh rahi teri Gemini API Key jo tune di hai
   const GEMINI_API_KEY = "AQ.Ab8RN6IhziSgyS5G0EQRP7-Qya_FPtGZyJsj1p6ud5nFFJ9SZg"; 
   const OPENROUTER_API_KEY = "Pk.eyJ1IjoicmtkYWlmaWxtcyIsImEiOiJjbXZveDdtOHUweGIyMnpxeGtxemJjODV5In0";
 
@@ -45,7 +44,6 @@ export const SupportChatbot: React.FC = () => {
         const data = await res.json();
         replyText = data.choices?.[0]?.message?.content || 'OpenRouter से कोई उत्तर नहीं मिला।';
       } else {
-        // Yeh raha Gemini 1.5 Flash ka sahi URL aur teri key
         const res = await fetch(`https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-flash:generateContent?key=${GEMINI_API_KEY}`, {
           method: 'POST',
           headers: {
@@ -73,71 +71,122 @@ export const SupportChatbot: React.FC = () => {
   };
 
   return (
-    <div className="max-w-xl mx-auto p-4 flex flex-col h-[80vh]">
-      <div className="bg-white dark:bg-zinc-900 border border-zinc-200 dark:border-zinc-800 rounded-2xl shadow-sm flex flex-col h-full overflow-hidden">
+    <div style={{ maxWidth: '600px', margin: '0 auto', padding: '15px', display: 'flex', flexDirection: 'column', height: '75vh', fontFamily: 'sans-serif' }}>
+      <div style={{ background: '#fff', border: '1px solid #e2e8f0', borderRadius: '16px', boxShadow: '0 2px 8px rgba(0,0,0,0.08)', display: 'flex', flexDirection: 'column', height: '100%', overflow: 'hidden' }}>
         
         {/* Header */}
-        <div className="p-4 border-b border-zinc-200 dark:border-zinc-800 flex items-center justify-between bg-zinc-50 dark:bg-zinc-800/50">
-          <div className="flex items-center gap-2">
-            <Bot className="w-5 h-5 text-red-600" />
-            <h2 className="font-bold text-sm text-zinc-900 dark:text-zinc-100">Hello Nepal AI सपोर्ट (24/7)</h2>
+        <div style={{ padding: '12px 15px', borderBottom: '1px solid #e2e8f0', display: 'flex', alignItems: 'center', justifyContent: 'space-between', background: '#f8fafc' }}>
+          <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+            <Bot style={{ width: '20px', height: '20px', color: '#dc2626' }} />
+            <h2 style={{ fontSize: '14px', fontWeight: 'bold', color: '#1e293b', margin: 0 }}>Hello Nepal AI सपोर्ट (24/7)</h2>
           </div>
           <button
             type="button"
             onClick={() => setUseOpenRouter(!useOpenRouter)}
-            className={`px-3 py-1 rounded-xl text-[10px] font-bold flex items-center gap-1 transition-colors ${
-              useOpenRouter ? 'bg-red-600 text-white' : 'bg-zinc-200 dark:bg-zinc-700 text-zinc-700 dark:text-zinc-300'
-            }`}
+            style={{
+              padding: '4px 10px',
+              borderRadius: '10px',
+              fontSize: '10px',
+              fontWeight: 'bold',
+              cursor: 'pointer',
+              border: 'none',
+              background: useOpenRouter ? '#dc2626' : '#e2e8f0',
+              color: useOpenRouter ? '#fff' : '#334155',
+              display: 'flex',
+              alignItem: 'center',
+              gap: '4px'
+            }}
           >
-            <Sparkles className="w-3 h-3" />
+            <Sparkles style={{ width: '12px', height: '12px' }} />
             {useOpenRouter ? 'Mode: OpenAI' : 'Mode: Gemini AI'}
           </button>
         </div>
 
         {/* Chat Messages */}
-        <div className="flex-1 p-4 overflow-y-auto space-y-3">
+        <div style={{ flex: 1, padding: '15px', overflowY: 'auto', display: 'flex', flexDirection: 'column', gap: '10px' }}>
           {messages.map((msg, index) => (
             <div
               key={index}
-              className={`flex items-start gap-2.5 ${msg.role === 'user' ? 'flex-row-reverse' : ''}`}
+              style={{
+                display: 'flex',
+                alignItems: 'flex-start',
+                gap: '8px',
+                flexDirection: msg.role === 'user' ? 'row-reverse' : 'row'
+              }}
             >
-              <div className={`w-7 h-7 rounded-full flex items-center justify-center text-xs shrink-0 ${
-                msg.role === 'user' ? 'bg-red-600 text-white' : 'bg-zinc-200 dark:bg-zinc-700 text-zinc-800 dark:text-zinc-200'
-              }`}>
-                {msg.role === 'user' ? <User className="w-4 h-4" /> : <Bot className="w-4 h-4" />}
+              <div style={{
+                width: '28px',
+                height: '28px',
+                borderRadius: '50%',
+                display: 'flex',
+                alignItems: 'center',
+                justifyContent: 'center',
+                fontSize: '12px',
+                flexShrink: 0,
+                background: msg.role === 'user' ? '#dc2626' : '#e2e8f0',
+                color: msg.role === 'user' ? '#fff' : '#1e293b'
+              }}>
+                {msg.role === 'user' ? <User style={{ width: '14px', height: '14px' }} /> : <Bot style={{ width: '14px', height: '14px' }} />}
               </div>
-              <div className={`p-3 rounded-2xl text-xs max-w-[75%] leading-relaxed ${
-                msg.role === 'user' 
-                  ? 'bg-red-600 text-white rounded-tr-none' 
-                  : 'bg-zinc-100 dark:bg-zinc-800 text-zinc-800 dark:text-zinc-200 rounded-tl-none'
-              }`}>
+              <div style={{
+                padding: '10px 12px',
+                borderRadius: '12px',
+                fontSize: '13px',
+                maxWidth: '75%',
+                lineHeight: '1.4',
+                background: msg.role === 'user' ? '#dc2626' : '#f1f5f9',
+                color: msg.role === 'user' ? '#fff' : '#1e293b',
+                borderTopRightRadius: msg.role === 'user' ? '2px' : '12px',
+                borderTopLeftRadius: msg.role === 'user' ? '12px' : '2px'
+              }}>
                 {msg.text}
               </div>
             </div>
           ))}
           {loading && (
-            <div className="flex items-center gap-2 text-zinc-400 text-xs p-2">
-              <Loader2 className="w-4 h-4 animate-spin text-red-600" />
+            <div style={{ display: 'flex', alignItems: 'center', gap: '6px', color: '#94a3b8', fontSize: '12px', padding: '5px' }}>
+              <Loader2 style={{ width: '14px', height: '14px', animation: 'spin 1s linear infinite', color: '#dc2626' }} />
               एआई सोच रहा है...
             </div>
           )}
         </div>
 
         {/* Input Form */}
-        <form onSubmit={handleSend} className="p-3 border-t border-zinc-200 dark:border-zinc-800 flex items-center gap-2 bg-white dark:bg-zinc-900">
+        <form onSubmit={handleSend} style={{ padding: '10px 15px', borderTop: '1px solid #e2e8f0', display: 'flex', alignItems: 'center', gap: '8px', background: '#fff' }}>
           <input
             type="text"
             placeholder={useOpenRouter ? "OpenAI से कुछ पूछें..." : "Gemini से कुछ पूछें..."}
             value={input}
             onChange={(e) => setInput(e.target.value)}
-            className="flex-1 px-3 py-2 text-xs border border-zinc-200 dark:border-zinc-700 rounded-xl bg-transparent text-zinc-900 dark:text-zinc-100 focus:outline-none focus:border-red-600"
+            style={{
+              flex: 1,
+              padding: '8px 12px',
+              fontSize: '13px',
+              border: '1px solid #cbd5e1',
+              borderRadius: '10px',
+              outline: 'none',
+              background: 'transparent',
+              color: '#1e293b'
+            }}
           />
           <button
             type="submit"
             disabled={loading || !input.trim()}
-            className="p-2.5 bg-red-600 hover:bg-red-700 text-white rounded-xl font-bold text-xs shadow-md transition-colors disabled:opacity-50 flex items-center justify-center"
+            style={{
+              padding: '8px 12px',
+              background: '#dc2626',
+              color: '#fff',
+              border: 'none',
+              borderRadius: '10px',
+              fontWeight: 'bold',
+              cursor: 'pointer',
+              display: 'flex',
+              alignItems: 'center',
+              justifyContent: 'center',
+              opacity: loading || !input.trim() ? 0.5 : 1
+            }}
           >
-            <Send className="w-4 h-4" />
+            <Send style={{ width: '16px', height: '16px' }} />
           </button>
         </form>
 
