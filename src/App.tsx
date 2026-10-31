@@ -1,4 +1,3 @@
-
 import React, { useEffect, useState } from 'react';
 import type { CSSProperties } from 'react';
 
@@ -6,14 +5,17 @@ import RideBooking from './components/RideBooking';
 import Marketplace from './components/Marketplace';
 import DriverKYC from './components/DriverKYC';
 import AdminDashboard from './components/AdminDashboard';
+import Profile from './components/Profile';
+import SupportChatbot from './components/SupportChatbot';
 
-type Tab = 'ride' | 'market' | 'kyc' | 'admin';
+type Tab = 'ride' | 'market' | 'kyc' | 'admin' | 'profile';
 
 const TABS: { id: Tab; label: string }[] = [
   { id: 'ride', label: 'राइड' },
   { id: 'market', label: 'मार्केट' },
   { id: 'kyc', label: 'केवाईसी' },
   { id: 'admin', label: 'एडमिन' },
+  { id: 'profile', label: 'प्रोफाइल' },
 ];
 
 function getTabFromHash(): Tab {
@@ -63,6 +65,7 @@ export default function App() {
         overflow: 'hidden',
         background: '#f8fafc',
         fontFamily: 'system-ui, sans-serif',
+        position: 'relative',
       }}
     >
       <header
@@ -165,7 +168,16 @@ export default function App() {
         <section style={paneStyle(activeTab === 'admin', true)}>
           {activeTab === 'admin' && <AdminDashboard />}
         </section>
+
+        <section style={paneStyle(activeTab === 'profile', true)}>
+          {activeTab === 'profile' && <Profile />}
+        </section>
       </main>
+
+      {/* एआई चैटबोट विजेट जो हर पेज पर नीचे फ्लोट करेगा */}
+      <div style={{ position: 'fixed', bottom: '20px', right: '20px', zIndex: 9999 }}>
+        <SupportChatbot />
+      </div>
     </div>
   );
 }
