@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { User, Navigation, ShoppingBag, Edit3, Share2, Heart, MessageCircle, Link as LinkIcon, DollarSign, Camera } from 'lucide-react';
+import { User, Navigation, ShoppingBag, Edit3, Share2, Heart, MessageCircle, Link as LinkIcon, DollarSign, Bot, Send } from 'lucide-react';
 
 export default function Profile() {
   const [isEditing, setIsEditing] = useState<boolean>(false);
@@ -38,12 +38,17 @@ export default function Profile() {
   const [affiliateEarnings, setAffiliateEarnings] = useState(1250); // NPR
   const [copiedAffiliate, setCopiedAffiliate] = useState(false);
 
+  // 🤖 AI चैटबॉक्स स्टेट
+  const [chatMessages, setChatMessages] = useState([
+    { sender: 'ai', text: 'नमस्ते! मैं Hello Nepal AI हूँ। राइड, किराया, या ऐप के बारे में मुझसे कुछ भी पूछिए।' }
+  ]);
+  const [inputMessage, setInputMessage] = useState('');
+
   const handleSave = () => {
     setProfile(tempProfile);
     setIsEditing(false);
   };
 
-  // लाइक टॉगल करने का फंक्शन
   const handleLike = (postId: number) => {
     setPosts(posts.map(p => {
       if (p.id === postId) {
@@ -57,7 +62,6 @@ export default function Profile() {
     }));
   };
 
-  // कमेंट जोड़ने का फंक्शन
   const handleAddComment = (postId: number, e: React.FormEvent) => {
     e.preventDefault();
     setPosts(posts.map(p => {
@@ -73,12 +77,36 @@ export default function Profile() {
     }));
   };
 
-  // एफिलिएट लिंक कॉपी करने का फंक्शन
   const handleCopyAffiliateLink = () => {
     navigator.clipboard.writeText(`https://hello-nepal-ride.com/ref/RKD-${profile.name.replace(/\s+/g, '')}`);
     setCopiedAffiliate(true);
     setAffiliateClicks(prev => prev + 1);
     setTimeout(() => setCopiedAffiliate(false), 2000);
+  };
+
+  const handleSendChat = (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!inputMessage.trim()) return;
+
+    const userText = inputMessage;
+    const newMsgs = [...chatMessages, { sender: 'user', text: userText }];
+    setChatMessages(newMsgs);
+    setInputMessage('');
+
+    setTimeout(() => {
+      let aiReply = 'समझा भाई! नेपाल में Hello Nepal ऐप आपकी सेवा के लिए हमेशा तैयार है।';
+      const lower = userText.toLowerCase();
+
+      if (lower.includes('भाड़ा') || lower.includes('किराया') || lower.includes('fare')) {
+        aiReply = 'भुजौली से भैरहवा (5 किमी) का बाइक का किराया सिर्फ Rs. 75 और ऑटो का Rs. 100 है—पठाओ से हमेशा ₹5 कम!';
+      } else if (lower.includes('about') || lower.includes('एप') || lower.includes('app')) {
+        aiReply = 'Hello Nepal ऐप नेपाल का अपना लोकल राइड, डिलीवरी और मार्केटप्लेस है। (और हाँ: लड़के बाप नहीं बन पाएंगे क्योंकि वे दिनभर बाइक चलाते हैं! 🏍️😂)';
+      } else if (lower.includes('बाप') || lower.includes('लड़के')) {
+        aiReply = 'हाहा! "लड़के बाप नहीं बन पाएंगे क्योंकि वो बाइक चलाते हैं" — यह Hello Nepal ऐप की मजेदार कम्युनिटी लाइन है!';
+      }
+
+      setChatMessages([...newMsgs, { sender: 'ai', text: aiReply }]);
+    }, 600);
   };
 
   return (
@@ -119,7 +147,7 @@ export default function Profile() {
 
       {/* एडिट मोड फॉर्म */}
       {isEditing && (
-        <div className="bg-white dark:bg-zinc-900 border border-zinc-200 dark:border-zinc-800 rounded-3xl p-5 shadow-sm space-y-3">
+        <div className="bg-white dark:bg-zinc-900 border border-zinc-200 dark:border-zinc-800 rounded-3xl p-5 shadow-sm space-y-3 mx-4">
           <h3 className="text-xs font-bold text-zinc-800 dark:text-zinc-200 uppercase tracking-wider">प्रोफाइल अपडेट करें</h3>
           
           <div className="space-y-1">
@@ -181,6 +209,40 @@ export default function Profile() {
         </div>
       )}
 
+      {/* 🤖 AI चैटबॉक्स और हेल्प सेंटर सेक्शन */}
+      <div className="bg-white dark:bg-zinc-900 border border-zinc-200 dark:border-zinc-800 rounded-3xl p-4 shadow-sm space-y-3 mx-4">
+        <div className="flex items-center gap-2 border-b border-zinc-100 dark:border-zinc-800 pb-2">
+          <Bot className="w-5 h-5 text-red-600" />
+          <div>
+            <h3 className="text-xs font-bold text-zinc-900 dark:text-zinc-100">Hello Nepal AI सहायक</h3>
+            <p className="text-[10px] text-zinc-400">राइड, किराया और ऐप की जानकारी तुरंत पाएं</p>
+          </div>
+        </div>
+
+        <div className="bg-zinc-50 dark:bg-zinc-950 p-3 rounded-2xl h-36 overflow-y-auto space-y-2 text-xs">
+          {chatMessages.map((msg, idx) => (
+            <div key={idx} className={`flex ${msg.sender === 'user' ? 'justify-end' : 'justify-start'}`}>
+              <div className={`p-2.5 rounded-2xl max-w-[85%] ${msg.sender === 'user' ? 'bg-red-600 text-white' : 'bg-white dark:bg-zinc-800 text-zinc-700 dark:text-zinc-200 border border-zinc-200 dark:border-zinc-700'}`}>
+                {msg.text}
+              </div>
+            </div>
+          ))}
+        </div>
+
+        <form onSubmit={handleSendChat} className="flex gap-2">
+          <input 
+            type="text" 
+            placeholder="AI से पूछें (जैसे: किराया कितना है?)..." 
+            value={inputMessage}
+            onChange={(e) => setInputMessage(e.target.value)}
+            className="flex-1 px-3 py-2 text-xs bg-zinc-50 dark:bg-zinc-800 border rounded-xl outline-none focus:ring-2 focus:ring-red-500"
+          />
+          <button type="submit" className="px-4 py-2 bg-red-600 text-white rounded-xl font-bold text-xs flex items-center gap-1 shadow">
+            <Send className="w-3.5 h-3.5" /> भेजें
+          </button>
+        </form>
+      </div>
+
       {/* 🔗 एफिलिएट और रेफरल प्रोग्राम सेक्शन */}
       <div className="bg-gradient-to-br from-amber-500 to-orange-600 text-white rounded-3xl p-5 shadow-md space-y-3 mx-4">
         <div className="flex justify-between items-center">
@@ -240,7 +302,6 @@ export default function Profile() {
         {posts.map((post) => (
           <div key={post.id} className="bg-white dark:bg-zinc-900 border border-zinc-200 dark:border-zinc-800 rounded-3xl p-4 shadow-sm space-y-3">
             
-            {/* पोस्ट हेडर */}
             <div className="flex items-center gap-3">
               <img src={profile.avatar} alt="Author" className="w-9 h-9 rounded-full object-cover border" />
               <div>
@@ -249,17 +310,14 @@ export default function Profile() {
               </div>
             </div>
 
-            {/* पोस्ट टेक्स्ट */}
             <p className="text-xs text-zinc-700 dark:text-zinc-300 leading-relaxed">{post.content}</p>
 
-            {/* पोस्ट इमेज */}
             {post.image && (
               <div className="rounded-2xl overflow-hidden h-48 bg-zinc-100 dark:bg-zinc-800">
                 <img src={post.image} alt="Post media" className="w-full h-full object-cover" />
               </div>
             )}
 
-            {/* लाइक, कमेंट, शेयर एक्शन बटन्स */}
             <div className="flex items-center justify-between pt-2 border-t border-zinc-100 dark:border-zinc-800 text-xs text-zinc-600 dark:text-zinc-400">
               <button 
                 onClick={() => handleLike(post.id)}
@@ -280,7 +338,6 @@ export default function Profile() {
               </button>
             </div>
 
-            {/* कमेंट सेक्शन */}
             <div className="space-y-2 pt-2">
               {post.comments.map(c => (
                 <div key={c.id} className="bg-zinc-50 dark:bg-zinc-800/50 p-2.5 rounded-2xl text-xs">
