@@ -65,7 +65,6 @@ export default function RideBooking() {
   useEffect(() => {
     if (!mapContainer.current) return;
 
-    // अगर मैप पहले से बना है तो उसे दोबारा मत हटाओ, बस साइज ठीक करो ताकि सादा न दिखे
     if (!mapInstance.current) {
       const map = L.map(mapContainer.current, {
         zoomControl: true,
