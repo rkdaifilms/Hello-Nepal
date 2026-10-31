@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { User, Navigation, ShoppingBag, Edit3, Share2, Heart, MessageCircle, Link as LinkIcon, DollarSign, Bot, Send } from 'lucide-react';
+import { User, Navigation, Edit3, Share2, Heart, MessageCircle, Link as LinkIcon, DollarSign, Bot, Send, Camera } from 'lucide-react';
 
 export default function Profile() {
   const [isEditing, setIsEditing] = useState<boolean>(false);
@@ -8,7 +8,7 @@ export default function Profile() {
   const [profile, setProfile] = useState({
     name: 'Ramkumar Dhobi',
     bio: 'नेपाल का अपना डिजिटल क्रिएटर, ड्राइवर और स्वतंत्र सर्विस प्रोवाइडर।',
-    phone: '+977 98XXXXXXXX',
+    phone: '+977 9811522480',
     facebook: 'https://facebook.com/ram.rkd',
     avatar: 'https://images.unsplash.com/photo-1535713875002-d1d0cf377fde?auto=format&fit=crop&w=150&h=150&q=80',
     cover: 'https://images.unsplash.com/photo-1557683316-973673baf926?auto=format&fit=crop&w=600&h=200&q=80'
@@ -16,7 +16,7 @@ export default function Profile() {
 
   const [tempProfile, setTempProfile] = useState(profile);
 
-  // सोशल पोस्ट और फीड स्टेट (लाइक, कमेंट, शेयर के लिए)
+  // सोशल पोस्ट और फीड स्टेट
   const [posts, setPosts] = useState([
     {
       id: 1,
@@ -33,20 +33,56 @@ export default function Profile() {
     }
   ]);
 
-  // एफिलिएट प्रोग्राम स्टेट
-  const [affiliateClicks, setAffiliateClicks] = useState(142);
-  const [affiliateEarnings, setAffiliateEarnings] = useState(1250); // NPR
+  // रेफरल कमीशन और एडमिन 5% शेयर स्टेट
+  const [totalShared, setTotalShared] = useState(12);
+  const [referralEarnings, setReferralEarnings] = useState(150); // अधिकतम सीमा Rs. 200 तक
+  const [adminCommissionPool, setAdminCommissionPool] = useState(450); // एडमिन/डेवलपर के पास जाने वाला 5% शेयर
   const [copiedAffiliate, setCopiedAffiliate] = useState(false);
 
   // 🤖 AI चैटबॉक्स स्टेट
   const [chatMessages, setChatMessages] = useState([
-    { sender: 'ai', text: 'नमस्ते! मैं Hello Nepal AI हूँ। राइड, किराया, या ऐप के बारे में मुझसे कुछ भी पूछिए।' }
+    { sender: 'ai', text: 'नमस्ते राम कुमार जी! मैं Hello Nepal AI हूँ। राइड, किराया, या ऐप के बारे में मुझसे कुछ भी पूछिए।' }
   ]);
   const [inputMessage, setInputMessage] = useState('');
 
   const handleSave = () => {
     setProfile(tempProfile);
     setIsEditing(false);
+  };
+
+  // प्रोफाइल फोटो बदलने का फंक्शन
+  const handleQuickAvatarChange = () => {
+    const newUrl = prompt('नया प्रोफाइल फोटो इमेज URL दर्ज करें:', profile.avatar);
+    if (newUrl) {
+      setProfile(prev => ({ ...prev, avatar: newUrl }));
+      setTempProfile(prev => ({ ...prev, avatar: newUrl }));
+    }
+  };
+
+  // कवर फोटो बदलने का फंक्शन
+  const handleQuickCoverChange = () => {
+    const newUrl = prompt('नया कवर/वॉलपेपर इमेज URL दर्ज करें:', profile.cover);
+    if (newUrl) {
+      setProfile(prev => ({ ...prev, cover: newUrl }));
+      setTempProfile(prev => ({ ...prev, cover: newUrl }));
+    }
+  };
+
+  // ट्रिप पूरी होने पर 5% यूजर को (Rs. 200 लिमिट तक) और 5% एडमिन/डेवलपर को
+  const handleSimulateTripActivity = () => {
+    const tripFare = 100; 
+    const userCommission = tripFare * 0.05; 
+    const adminShare = tripFare * 0.05; 
+
+    let newEarnings = referralEarnings;
+    if (referralEarnings < 200) {
+      newEarnings = Math.min(200, referralEarnings + userCommission);
+      setReferralEarnings(newEarnings);
+    }
+
+    setAdminCommissionPool(prev => prev + adminShare);
+
+    alert(`ट्रिप पूरी हुई!\n- यूजर को मिला 5% कमीशन: Rs. ${userCommission}\n- डेवलपर/एडमिन को गया 5%: Rs. ${adminShare}`);
   };
 
   const handleLike = (postId: number) => {
@@ -80,7 +116,7 @@ export default function Profile() {
   const handleCopyAffiliateLink = () => {
     navigator.clipboard.writeText(`https://hello-nepal-ride.com/ref/RKD-${profile.name.replace(/\s+/g, '')}`);
     setCopiedAffiliate(true);
-    setAffiliateClicks(prev => prev + 1);
+    setTotalShared(prev => prev + 1);
     setTimeout(() => setCopiedAffiliate(false), 2000);
   };
 
@@ -114,14 +150,24 @@ export default function Profile() {
       
       {/* कवर और प्रोफाइल हेडर */}
       <div className="bg-white dark:bg-zinc-900 border-b border-zinc-200 dark:border-zinc-800 rounded-b-3xl shadow-sm overflow-hidden">
-        <div className="relative h-32 bg-zinc-200 dark:bg-zinc-800">
+        
+        {/* कवर फोटो */}
+        <div className="relative h-32 bg-zinc-200 dark:bg-zinc-800 cursor-pointer group" onClick={handleQuickCoverChange}>
           <img src={profile.cover} alt="Cover" className="w-full h-full object-cover" />
+          <div className="absolute inset-0 bg-black/30 opacity-0 group-hover:opacity-100 transition flex items-center justify-center text-white text-xs font-bold gap-1">
+            <Camera className="w-4 h-4" /> कवर वॉलपेपर बदलें
+          </div>
         </div>
 
         <div className="px-5 pb-5 relative">
           <div className="flex justify-between items-end -mt-10 mb-3">
-            <div className="relative w-20 h-20 rounded-full border-4 border-white dark:border-zinc-900 overflow-hidden bg-white shadow-md">
+            
+            {/* प्रोफाइल पिक */}
+            <div className="relative w-20 h-20 rounded-full border-4 border-white dark:border-zinc-900 overflow-hidden bg-white shadow-md cursor-pointer group" onClick={handleQuickAvatarChange}>
               <img src={profile.avatar} alt="Avatar" className="w-full h-full object-cover" />
+              <div className="absolute inset-0 bg-black/40 opacity-0 group-hover:opacity-100 transition flex items-center justify-center text-white">
+                <Camera className="w-6 h-6" />
+              </div>
             </div>
             
             {!isEditing && (
@@ -148,7 +194,7 @@ export default function Profile() {
       {/* एडिट मोड फॉर्म */}
       {isEditing && (
         <div className="bg-white dark:bg-zinc-900 border border-zinc-200 dark:border-zinc-800 rounded-3xl p-5 shadow-sm space-y-3 mx-4">
-          <h3 className="text-xs font-bold text-zinc-800 dark:text-zinc-200 uppercase tracking-wider">प्रोफाइल अपडेट करें</h3>
+          <h3 className="text-xs font-bold text-zinc-800 dark:text-zinc-200 uppercase tracking-wider">प्रोफाइल डिटेल्स अपडेट करें</h3>
           
           <div className="space-y-1">
             <label className="text-[10px] text-zinc-400 font-bold">पूरा नाम</label>
@@ -190,6 +236,16 @@ export default function Profile() {
             />
           </div>
 
+          <div className="space-y-1">
+            <label className="text-[10px] text-zinc-400 font-bold">कवर फोटो URL</label>
+            <input 
+              type="text" 
+              value={tempProfile.cover}
+              onChange={(e) => setTempProfile({...tempProfile, cover: e.target.value})}
+              className="w-full px-3 py-2 text-xs bg-zinc-50 dark:bg-zinc-800 border rounded-xl outline-none focus:ring-2 focus:ring-red-500"
+            />
+          </div>
+
           <div className="flex gap-2 pt-2">
             <button
               type="button"
@@ -209,7 +265,48 @@ export default function Profile() {
         </div>
       )}
 
-      {/* 🤖 AI चैटबॉक्स और हेल्प सेंटर सेक्शन */}
+      {/* 🤝 रेफरल शेयरिंग और 5% ट्रिप कमीशन सिस्टम */}
+      <div className="bg-gradient-to-br from-amber-500 to-orange-600 text-white rounded-3xl p-5 shadow-md space-y-3 mx-4">
+        <div className="flex justify-between items-center">
+          <h3 className="text-xs font-bold uppercase tracking-wider flex items-center gap-1.5">
+            <DollarSign className="w-4 h-4" /> रेफरल & 5% ट्रिप कमीशन
+          </h3>
+          <span className="text-[10px] bg-white/20 px-2 py-1 rounded-full font-bold">मैक्स सीमा Rs. 200</span>
+        </div>
+        
+        <p className="text-xs text-amber-100 leading-relaxed">
+          जिसे मर्जी शेयर करें! हर ट्रिप/काम पर 5% कमीशन आपके खाते में जुड़ता है (अधिकतम सीमा Rs. 200 तक)। साथ ही 5% हिस्सा एडमिन/डेवलपर को जाता है।
+        </p>
+
+        <div className="bg-black/20 p-3 rounded-2xl flex items-center justify-between text-xs">
+          <span className="font-mono truncate mr-2">https://hello-nepal-ride.com/ref/RKD-{profile.name.replace(/\s+/g, '')}</span>
+          <button 
+            onClick={handleCopyAffiliateLink}
+            className="px-3 py-1.5 bg-white text-orange-600 rounded-xl font-bold text-[11px] shadow shrink-0"
+          >
+            {copiedAffiliate ? 'लिंक शेयर/कॉपी हुआ! ✅' : 'लिंक शेयर करें'}
+          </button>
+        </div>
+
+        <div className="flex justify-between items-center pt-1 text-xs font-semibold text-amber-100">
+          <span>कुल शेयर: {totalShared} बार</span>
+          <span>कमीशन: Rs. {referralEarnings} / 200 NPR</span>
+        </div>
+
+        <div className="flex justify-between items-center pt-1 text-[11px] text-amber-200 border-t border-white/20">
+          <span>डेवलपर/एडमिन 5% शेयर पूल:</span>
+          <span className="font-bold">Rs. {adminCommissionPool} NPR</span>
+        </div>
+
+        <button 
+          onClick={handleSimulateTripActivity}
+          className="w-full py-2 bg-white/10 hover:bg-white/20 text-white rounded-xl font-bold text-xs border border-white/30 transition"
+        >
+          🔄 टेस्ट करें: ट्रिप पूरी होने पर 5% कमीशन जोड़ें
+        </button>
+      </div>
+
+      {/* 🤖 AI चैटबॉक्स */}
       <div className="bg-white dark:bg-zinc-900 border border-zinc-200 dark:border-zinc-800 rounded-3xl p-4 shadow-sm space-y-3 mx-4">
         <div className="flex items-center gap-2 border-b border-zinc-100 dark:border-zinc-800 pb-2">
           <Bot className="w-5 h-5 text-red-600" />
@@ -243,35 +340,6 @@ export default function Profile() {
         </form>
       </div>
 
-      {/* 🔗 एफिलिएट और रेफरल प्रोग्राम सेक्शन */}
-      <div className="bg-gradient-to-br from-amber-500 to-orange-600 text-white rounded-3xl p-5 shadow-md space-y-3 mx-4">
-        <div className="flex justify-between items-center">
-          <h3 className="text-xs font-bold uppercase tracking-wider flex items-center gap-1.5">
-            <DollarSign className="w-4 h-4" /> एफिलिएट & रेफरल प्रोग्राम
-          </h3>
-          <span className="text-[10px] bg-white/20 px-2 py-1 rounded-full font-bold">कमर्शल</span>
-        </div>
-        
-        <p className="text-xs text-amber-100 leading-relaxed">
-          अपना एफिलिएट लिंक शेयर करें और हर राइड या सामान की बिक्री पर कमीशन कमाएं!
-        </p>
-
-        <div className="bg-black/20 p-3 rounded-2xl flex items-center justify-between text-xs">
-          <span className="font-mono truncate mr-2">https://hello-nepal-ride.com/ref/RKD-{profile.name.replace(/\s+/g, '')}</span>
-          <button 
-            onClick={handleCopyAffiliateLink}
-            className="px-3 py-1.5 bg-white text-orange-600 rounded-xl font-bold text-[11px] shadow shrink-0"
-          >
-            {copiedAffiliate ? 'कॉपी हो गया! ✅' : 'लिंक कॉपी करें'}
-          </button>
-        </div>
-
-        <div className="flex justify-between pt-1 text-xs font-semibold text-amber-100">
-          <span>कुल क्लिक्स: {affiliateClicks}</span>
-          <span>कुल कमाई: Rs. {affiliateEarnings} NPR</span>
-        </div>
-      </div>
-
       {/* Quick Role Switcher */}
       <div className="bg-white dark:bg-zinc-900 border border-zinc-200 dark:border-zinc-800 rounded-3xl p-5 shadow-sm space-y-3 mx-4">
         <h3 className="text-xs font-bold text-zinc-800 dark:text-zinc-200 uppercase tracking-wider">सेवा विकल्प (Services & Roles)</h3>
@@ -286,10 +354,10 @@ export default function Profile() {
           </div>
 
           <div className="p-3 border border-zinc-200 dark:border-zinc-800 rounded-2xl flex items-center gap-3 bg-zinc-50 dark:bg-zinc-800/40">
-            <ShoppingBag className="w-5 h-5 text-emerald-600" />
+            <User className="w-5 h-5 text-emerald-600" />
             <div>
-              <p className="text-xs font-bold">मार्केट विक्रेता</p>
-              <p className="text-[10px] text-zinc-400">सामान पोस्ट करें</p>
+              <p className="text-xs font-bold">स्वतंत्र क्रिएटर</p>
+              <p className="text-[10px] text-zinc-400">प्रोफाइल एक्टिव</p>
             </div>
           </div>
         </div>
