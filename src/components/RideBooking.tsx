@@ -22,12 +22,12 @@ export default function RideBooking() {
   const mapInstance = useRef<L.Map | null>(null);
   const routeLayerRef = useRef<L.LayerGroup | null>(null);
 
-  const [pickup, setPickup] = useState<string>('Bethari');
+  const [pickup, setPickup] = useState<string>('Bhujouli');
   const [dropoff, setDropoff] = useState<string>('Bairahawa');
   const [vehicle, setVehicle] = useState<string>('bike'); // bike, auto, car
   const [routeInfo, setRouteInfo] = useState<string>('नेपाल रूट खोजा जा रहा है...');
-  const [distanceKm, setDistanceKm] = useState<number>(6.4);
-  const [totalFare, setTotalFare] = useState<number>(155);
+  const [distanceKm, setDistanceKm] = useState<number>(5.0);
+  const [totalFare, setTotalFare] = useState<number>(100);
   const [loading, setLoading] = useState<boolean>(false);
 
   const [showPaymentModal, setShowPaymentModal] = useState<boolean>(false);
@@ -151,7 +151,7 @@ export default function RideBooking() {
           const latDiff = Math.abs(startCoords[1] - endCoords[1]);
           const lonDiff = Math.abs(startCoords[0] - endCoords[0]);
           distKmVal = parseFloat(((latDiff + lonDiff) * 111).toFixed(1));
-          if (distKmVal < 1.5) distKmVal = 6.4;
+          if (distKmVal < 1.5) distKmVal = 5.0;
           durMin = Math.round(distKmVal * 2.5);
         }
 
@@ -179,7 +179,8 @@ export default function RideBooking() {
     const latDiff = Math.abs(start[1] - end[1]);
     const lonDiff = Math.abs(start[0] - end[0]);
     let calcDist = parseFloat(((latDiff + lonDiff) * 111).toFixed(1));
-    if (calcDist < 2) calcDist = 6.4;
+    if (calcDist < 2) calcDist = 5.0;
+    const durMin = Math.round(calcDist * 2.5);
 
     const roadLatLon: [number, number][] = [
       [start[1], start[0]],
@@ -190,25 +191,23 @@ export default function RideBooking() {
     map.fitBounds(polyline.getBounds(), { padding: [40, 40] });
     
     setDistanceKm(calcDist);
-    setRouteInfo(`📍 दूरी: ${calcDist} किमी | ⏱️ समय: ${Math.round(calcDist * 2.5)} मिनट (नेपाल डायरेक्ट रूट)`);
+    setRouteInfo(`📍 दूरी: ${calcDist} किमी | ⏱️ समय: ${durMin} मिनट (नेपाल डायरेक्ट रूट)`);
     updateFare(calcDist, vehicle);
   };
 
-  // पठाओ और इनड्राइव नेपाल के मानकों के अनुसार बिल्कुल सटीक और किफायती किराया
+  // बिल्कुल सीधा और सटीक प्रति किलोमीटर हिसाब (ऑटो 5 किमी का सीधे 100 रुपये!)
   const updateFare = (dist: number, selectedVehicle: string) => {
-    let baseFare = 40;
-    let perKm = 18;
+    let perKmRate = 20; // ऑटो के लिए 1 किमी का 20 रुपये (यानी 5 किमी का 100 रुपये)
 
-    if (selectedVehicle === 'auto') {
-      baseFare = 80;
-      perKm = 30;
+    if (selectedVehicle === 'bike') {
+      perKmRate = 15; // बाइक के लिए थोड़ा और कम (1 किमी का 15 रुपये)
     } else if (selectedVehicle === 'car') {
-      baseFare = 150;
-      perKm = 45;
+      perKmRate = 30; // कार/जीप के लिए 1 किमी का 30 रुपये
     }
     
-    const calculated = Math.round(baseFare + (dist * perKm));
-    setTotalFare(calculated);
+    const calculated = Math.round(dist * perKmRate);
+    // न्यूनतम किराया कम से कम 30 रुपये तो होना ही चाहिए
+    setTotalFare(calculated < 30 ? 30 : calculated);
   };
 
   const handleVehicleChange = (vType: string) => {
@@ -244,7 +243,7 @@ export default function RideBooking() {
       {/* मैप */}
       <div ref={mapContainer} style={{ width: '100%', height: '180px', flexShrink: 0, zIndex: 1, borderBottom: '1px solid #e2e8f0', background: '#e2e8f0' }} />
 
-      {/* नीचे वाहन चयन, दूरी, वास्तविक किराया और बुकिंग पैनल */}
+      {/* नीचे वाहन चयन, दूरी, वास्तविक किफायती किराया और बुकिंग पैनल */}
       <div style={{ padding: '12px', background: '#ffffff', flex: 1, display: 'flex', flexDirection: 'column', gap: '10px' }}>
         
         {/* वाहन के विकल्प */}
