@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { User, Navigation, Edit3, Share2, Heart, MessageCircle, Link as LinkIcon, DollarSign, Bot, Send, Camera } from 'lucide-react';
+import { User, Navigation, Edit3, Share2, Heart, MessageCircle, DollarSign, Bot, Send, Camera } from 'lucide-react';
 
 export default function Profile() {
   const [isEditing, setIsEditing] = useState<boolean>(false);
@@ -33,15 +33,23 @@ export default function Profile() {
     }
   ]);
 
+  // नया सामान बेचने के लिए पोस्ट करने का स्टेट (जो सीधे मार्केटप्लेस में सिंक होगा)
+  const [showPostModal, setShowPostModal] = useState<boolean>(false);
+  const [newTitle, setNewTitle] = useState<string>('');
+  const [newPrice, setNewPrice] = useState<string>('');
+  const [newCategory, setNewCategory] = useState<string>('Medicines');
+  const [newDesc, setNewDesc] = useState<string>('');
+  const [newImage, setNewImage] = useState<string>('');
+
   // रेफरल कमीशन और एडमिन 5% शेयर स्टेट
   const [totalShared, setTotalShared] = useState(12);
-  const [referralEarnings, setReferralEarnings] = useState(150); // अधिकतम सीमा Rs. 200 तक
-  const [adminCommissionPool, setAdminCommissionPool] = useState(450); // एडमिन/डेवलपर के पास जाने वाला 5% शेयर
+  const [referralEarnings, setReferralEarnings] = useState(150);
+  const [adminCommissionPool, setAdminCommissionPool] = useState(450);
   const [copiedAffiliate, setCopiedAffiliate] = useState(false);
 
-  // 🤖 AI चैटबॉक्स स्टेट
+  // 🤖 AI चैटबॉक्स स्टेट (तुरंत और स्मार्ट जवाब के लिए)
   const [chatMessages, setChatMessages] = useState([
-    { sender: 'ai', text: 'नमस्ते राम कुमार जी! मैं Hello Nepal AI हूँ। राइड, किराया, या ऐप के बारे में मुझसे कुछ भी पूछिए।' }
+    { sender: 'ai', text: 'नमस्ते! मैं Hello Nepal AI हूँ। राइड, किराया, या ऐप के बारे में मुझसे कुछ भी पूछिए।' }
   ]);
   const [inputMessage, setInputMessage] = useState('');
 
@@ -50,25 +58,64 @@ export default function Profile() {
     setIsEditing(false);
   };
 
-  // प्रोफाइल फोटो बदलने का फंक्शन
-  const handleQuickAvatarChange = () => {
-    const newUrl = prompt('नया प्रोफाइल फोटो इमेज URL दर्ज करें:', profile.avatar);
-    if (newUrl) {
-      setProfile(prev => ({ ...prev, avatar: newUrl }));
-      setTempProfile(prev => ({ ...prev, avatar: newUrl }));
+  // 📂 मोबाइल गैलरी से सीधे प्रोफाइल फोटो चुनने का फंक्शन
+  const handleAvatarFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (file) {
+      const imageUrl = URL.createObjectURL(file);
+      setProfile(prev => ({ ...prev, avatar: imageUrl }));
+      setTempProfile(prev => ({ ...prev, avatar: imageUrl }));
     }
   };
 
-  // कवर फोटो बदलने का फंक्शन
-  const handleQuickCoverChange = () => {
-    const newUrl = prompt('नया कवर/वॉलपेपर इमेज URL दर्ज करें:', profile.cover);
-    if (newUrl) {
-      setProfile(prev => ({ ...prev, cover: newUrl }));
-      setTempProfile(prev => ({ ...prev, cover: newUrl }));
+  // 📂 मोबाइल गैलरी से सीधे कवर फोटो चुनने का फंक्शन
+  const handleCoverFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (file) {
+      const imageUrl = URL.createObjectURL(file);
+      setProfile(prev => ({ ...prev, cover: imageUrl }));
+      setTempProfile(prev => ({ ...prev, cover: imageUrl }));
     }
   };
 
-  // ट्रिप पूरी होने पर 5% यूजर को (Rs. 200 लिमिट तक) और 5% एडमिन/डेवलपर को
+  // प्रोफाइल से सामान पोस्ट करके मार्केटप्लेस में भेजने का फंक्शन
+  const handleCreateProductPost = (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!newTitle || !newPrice) return;
+
+    const newProduct = {
+      id: `prod-${Date.now()}`,
+      vendorId: 'ven-my-profile',
+      vendorName: profile.name,
+      title: newTitle,
+      category: newCategory,
+      description: newDesc || 'कोई विवरण नहीं दिया गया',
+      basePrice: Number(newPrice),
+      markupPrice: Number(newPrice),
+      imageUrl: newImage || 'https://images.unsplash.com/photo-1523275335684-37898b6baf30?auto=format&fit=crop&w=400&q=80',
+      stockCount: 10,
+    };
+
+    const existing = localStorage.getItem('hello_nepal_marketplace_products');
+    let parsedList = [];
+    if (existing) {
+      try {
+        parsedList = JSON.parse(existing);
+      } catch (err) {}
+    }
+
+    const updatedList = [newProduct, ...parsedList];
+    localStorage.setItem('hello_nepal_marketplace_products', JSON.stringify(updatedList));
+
+    alert('सफलतापूर्वक सामान मार्केटप्लेस पर पोस्ट कर दिया गया है!');
+    setNewTitle('');
+    setNewPrice('');
+    setNewDesc('');
+    setNewImage('');
+    setShowPostModal(false);
+  };
+
+  // ट्रिप पूरी होने पर 5% यूजर को और 5% डेवलपर/एडमिन को
   const handleSimulateTripActivity = () => {
     const tripFare = 100; 
     const userCommission = tripFare * 0.05; 
@@ -120,6 +167,7 @@ export default function Profile() {
     setTimeout(() => setCopiedAffiliate(false), 2000);
   };
 
+  // 🤖 AI तुरंत जवाब देने वाला स्मार्ट चैट लॉजिक
   const handleSendChat = (e: React.FormEvent) => {
     e.preventDefault();
     if (!inputMessage.trim()) return;
@@ -130,7 +178,7 @@ export default function Profile() {
     setInputMessage('');
 
     setTimeout(() => {
-      let aiReply = 'समझा भाई! नेपाल में Hello Nepal ऐप आपकी सेवा के लिए हमेशा तैयार है।';
+      let aiReply = 'हाँ भाई, नेपाल में Hello Nepal ऐप आपकी सेवा के लिए तैयार है। बताइए क्या मदद चाहिए?';
       const lower = userText.toLowerCase();
 
       if (lower.includes('भाड़ा') || lower.includes('किराया') || lower.includes('fare')) {
@@ -139,10 +187,12 @@ export default function Profile() {
         aiReply = 'Hello Nepal ऐप नेपाल का अपना लोकल राइड, डिलीवरी और मार्केटप्लेस है। (और हाँ: लड़के बाप नहीं बन पाएंगे क्योंकि वे दिनभर बाइक चलाते हैं! 🏍️😂)';
       } else if (lower.includes('बाप') || lower.includes('लड़के')) {
         aiReply = 'हाहा! "लड़के बाप नहीं बन पाएंगे क्योंकि वो बाइक चलाते हैं" — यह Hello Nepal ऐप की मजेदार कम्युनिटी लाइन है!';
+      } else if (lower.includes('कमीशन') || lower.includes('referral')) {
+        aiReply = 'रेफरल सिस्टम में हर ट्रिप पर 5% कमीशन मिलता है जो अधिकतम Rs. 200 तक जुड़ता है, और 5% हिस्सा डेवलपर/एडमिन को जाता है।';
       }
 
       setChatMessages([...newMsgs, { sender: 'ai', text: aiReply }]);
-    }, 600);
+    }, 300);
   };
 
   return (
@@ -151,24 +201,26 @@ export default function Profile() {
       {/* कवर और प्रोफाइल हेडर */}
       <div className="bg-white dark:bg-zinc-900 border-b border-zinc-200 dark:border-zinc-800 rounded-b-3xl shadow-sm overflow-hidden">
         
-        {/* कवर फोटो */}
-        <div className="relative h-32 bg-zinc-200 dark:bg-zinc-800 cursor-pointer group" onClick={handleQuickCoverChange}>
+        {/* गैलरी से कवर बदलने का ऑप्शन */}
+        <label className="relative h-32 bg-zinc-200 dark:bg-zinc-800 cursor-pointer group block">
           <img src={profile.cover} alt="Cover" className="w-full h-full object-cover" />
           <div className="absolute inset-0 bg-black/30 opacity-0 group-hover:opacity-100 transition flex items-center justify-center text-white text-xs font-bold gap-1">
-            <Camera className="w-4 h-4" /> कवर वॉलपेपर बदलें
+            <Camera className="w-4 h-4" /> गैलरी से कवर बदलें
           </div>
-        </div>
+          <input type="file" accept="image/*" onChange={handleCoverFileChange} className="hidden" />
+        </label>
 
         <div className="px-5 pb-5 relative">
           <div className="flex justify-between items-end -mt-10 mb-3">
             
-            {/* प्रोफाइल पिक */}
-            <div className="relative w-20 h-20 rounded-full border-4 border-white dark:border-zinc-900 overflow-hidden bg-white shadow-md cursor-pointer group" onClick={handleQuickAvatarChange}>
+            {/* गैलरी से प्रोफाइल फोटो बदलने का ऑप्शन */}
+            <label className="relative w-20 h-20 rounded-full border-4 border-white dark:border-zinc-900 overflow-hidden bg-white shadow-md cursor-pointer group block">
               <img src={profile.avatar} alt="Avatar" className="w-full h-full object-cover" />
               <div className="absolute inset-0 bg-black/40 opacity-0 group-hover:opacity-100 transition flex items-center justify-center text-white">
                 <Camera className="w-6 h-6" />
               </div>
-            </div>
+              <input type="file" accept="image/*" onChange={handleAvatarFileChange} className="hidden" />
+            </label>
             
             {!isEditing && (
               <button 
@@ -226,26 +278,6 @@ export default function Profile() {
             />
           </div>
 
-          <div className="space-y-1">
-            <label className="text-[10px] text-zinc-400 font-bold">प्रोफाइल फोटो URL</label>
-            <input 
-              type="text" 
-              value={tempProfile.avatar}
-              onChange={(e) => setTempProfile({...tempProfile, avatar: e.target.value})}
-              className="w-full px-3 py-2 text-xs bg-zinc-50 dark:bg-zinc-800 border rounded-xl outline-none focus:ring-2 focus:ring-red-500"
-            />
-          </div>
-
-          <div className="space-y-1">
-            <label className="text-[10px] text-zinc-400 font-bold">कवर फोटो URL</label>
-            <input 
-              type="text" 
-              value={tempProfile.cover}
-              onChange={(e) => setTempProfile({...tempProfile, cover: e.target.value})}
-              className="w-full px-3 py-2 text-xs bg-zinc-50 dark:bg-zinc-800 border rounded-xl outline-none focus:ring-2 focus:ring-red-500"
-            />
-          </div>
-
           <div className="flex gap-2 pt-2">
             <button
               type="button"
@@ -264,6 +296,16 @@ export default function Profile() {
           </div>
         </div>
       )}
+
+      {/* 🛒 मार्केटप्लेस के लिए सामान पोस्ट करने का बटन */}
+      <div className="mx-4">
+        <button 
+          onClick={() => setShowPostModal(true)}
+          className="w-full py-3 bg-emerald-600 hover:bg-emerald-700 text-white rounded-2xl font-bold text-xs shadow flex items-center justify-center gap-2"
+        >
+          📦 मार्केटप्लेस पर बेचने के लिए नया सामान पोस्ट करें
+        </button>
+      </div>
 
       {/* 🤝 रेफरल शेयरिंग और 5% ट्रिप कमीशन सिस्टम */}
       <div className="bg-gradient-to-br from-amber-500 to-orange-600 text-white rounded-3xl p-5 shadow-md space-y-3 mx-4">
@@ -306,13 +348,13 @@ export default function Profile() {
         </button>
       </div>
 
-      {/* 🤖 AI चैटबॉक्स */}
+      {/* 🤖 AI तुरंत उत्तर देने वाला चैटबॉक्स */}
       <div className="bg-white dark:bg-zinc-900 border border-zinc-200 dark:border-zinc-800 rounded-3xl p-4 shadow-sm space-y-3 mx-4">
         <div className="flex items-center gap-2 border-b border-zinc-100 dark:border-zinc-800 pb-2">
           <Bot className="w-5 h-5 text-red-600" />
           <div>
             <h3 className="text-xs font-bold text-zinc-900 dark:text-zinc-100">Hello Nepal AI सहायक</h3>
-            <p className="text-[10px] text-zinc-400">राइड, किराया और ऐप की जानकारी तुरंत पाएं</p>
+            <p className="text-[10px] text-zinc-400">तुरंत जवाब देने वाला स्मार्ट चैट सिस्टम</p>
           </div>
         </div>
 
@@ -329,7 +371,7 @@ export default function Profile() {
         <form onSubmit={handleSendChat} className="flex gap-2">
           <input 
             type="text" 
-            placeholder="AI से पूछें (जैसे: किराया कितना है?)..." 
+            placeholder="AI से तुरंत पूछें..." 
             value={inputMessage}
             onChange={(e) => setInputMessage(e.target.value)}
             className="flex-1 px-3 py-2 text-xs bg-zinc-50 dark:bg-zinc-800 border rounded-xl outline-none focus:ring-2 focus:ring-red-500"
@@ -340,100 +382,87 @@ export default function Profile() {
         </form>
       </div>
 
-      {/* Quick Role Switcher */}
-      <div className="bg-white dark:bg-zinc-900 border border-zinc-200 dark:border-zinc-800 rounded-3xl p-5 shadow-sm space-y-3 mx-4">
-        <h3 className="text-xs font-bold text-zinc-800 dark:text-zinc-200 uppercase tracking-wider">सेवा विकल्प (Services & Roles)</h3>
-        
-        <div className="grid grid-cols-2 gap-3">
-          <div className="p-3 border border-zinc-200 dark:border-zinc-800 rounded-2xl flex items-center gap-3 bg-zinc-50 dark:bg-zinc-800/40">
-            <Navigation className="w-5 h-5 text-red-600" />
-            <div>
-              <p className="text-xs font-bold">राइडर / डिलीवरी</p>
-              <p className="text-[10px] text-zinc-400">सक्रिय पार्टनर</p>
+      {/* सामान पोस्ट करने का मॉडल पॉपअप */}
+      {showPostModal && (
+        <div className="fixed inset-0 bg-black/60 z-50 flex items-center justify-center p-4">
+          <div className="bg-white dark:bg-zinc-900 w-full max-w-sm rounded-3xl p-5 space-y-4 shadow-xl">
+            <div className="flex justify-between items-center">
+              <h3 className="text-sm font-bold text-zinc-900 dark:text-zinc-100">🛒 मार्केटप्लेस के लिए सामान पोस्ट करें</h3>
+              <button onClick={() => setShowPostModal(false)} className="text-zinc-400 font-bold text-base">✕</button>
             </div>
-          </div>
 
-          <div className="p-3 border border-zinc-200 dark:border-zinc-800 rounded-2xl flex items-center gap-3 bg-zinc-50 dark:bg-zinc-800/40">
-            <User className="w-5 h-5 text-emerald-600" />
-            <div>
-              <p className="text-xs font-bold">स्वतंत्र क्रिएटर</p>
-              <p className="text-[10px] text-zinc-400">प्रोफाइल एक्टिव</p>
-            </div>
-          </div>
-        </div>
-      </div>
-
-      {/* 📱 सोशल फीड / पोस्ट्स (लाइक, कमेंट, शेयर के साथ) */}
-      <div className="space-y-4 px-4">
-        <h3 className="text-xs font-bold text-zinc-800 dark:text-zinc-200 uppercase tracking-wider px-1">मेरी कम्युनिटी पोस्ट्स & अपडेट</h3>
-        
-        {posts.map((post) => (
-          <div key={post.id} className="bg-white dark:bg-zinc-900 border border-zinc-200 dark:border-zinc-800 rounded-3xl p-4 shadow-sm space-y-3">
-            
-            <div className="flex items-center gap-3">
-              <img src={profile.avatar} alt="Author" className="w-9 h-9 rounded-full object-cover border" />
+            <form onSubmit={handleCreateProductPost} className="space-y-3 text-xs">
               <div>
-                <p className="text-xs font-bold text-zinc-900 dark:text-zinc-100">{post.author}</p>
-                <p className="text-[10px] text-zinc-400">{post.time}</p>
-              </div>
-            </div>
-
-            <p className="text-xs text-zinc-700 dark:text-zinc-300 leading-relaxed">{post.content}</p>
-
-            {post.image && (
-              <div className="rounded-2xl overflow-hidden h-48 bg-zinc-100 dark:bg-zinc-800">
-                <img src={post.image} alt="Post media" className="w-full h-full object-cover" />
-              </div>
-            )}
-
-            <div className="flex items-center justify-between pt-2 border-t border-zinc-100 dark:border-zinc-800 text-xs text-zinc-600 dark:text-zinc-400">
-              <button 
-                onClick={() => handleLike(post.id)}
-                className={`flex items-center gap-1.5 font-bold px-3 py-1.5 rounded-xl transition ${post.isLiked ? 'text-red-600 bg-red-50 dark:bg-red-950/30' : 'hover:bg-zinc-100 dark:hover:bg-zinc-800'}`}
-              >
-                <Heart className={`w-4 h-4 ${post.isLiked ? 'fill-red-600' : ''}`} /> {post.likes} लाइक्स
-              </button>
-
-              <button className="flex items-center gap-1.5 font-bold px-3 py-1.5 rounded-xl hover:bg-zinc-100 dark:hover:bg-zinc-800">
-                <MessageCircle className="w-4 h-4" /> {post.comments.length} कमेंट्स
-              </button>
-
-              <button 
-                onClick={() => alert('पोस्ट लिंक शेयर के लिए कॉपी कर लिया गया है!')}
-                className="flex items-center gap-1.5 font-bold px-3 py-1.5 rounded-xl hover:bg-zinc-100 dark:hover:bg-zinc-800 text-blue-600"
-              >
-                <Share2 className="w-4 h-4" /> शेयर
-              </button>
-            </div>
-
-            <div className="space-y-2 pt-2">
-              {post.comments.map(c => (
-                <div key={c.id} className="bg-zinc-50 dark:bg-zinc-800/50 p-2.5 rounded-2xl text-xs">
-                  <span className="font-bold text-zinc-900 dark:text-zinc-100 mr-2">{c.user}:</span>
-                  <span className="text-zinc-600 dark:text-zinc-300">{c.text}</span>
-                </div>
-              ))}
-
-              <form onSubmit={(e) => handleAddComment(post.id, e)} className="flex gap-2 pt-1">
+                <label className="text-[10px] text-zinc-400 font-bold">सामान का नाम</label>
                 <input 
                   type="text" 
-                  placeholder="अपना कमेंट लिखें..." 
-                  value={post.newCommentText}
-                  onChange={(e) => {
-                    const val = e.target.value;
-                    setPosts(posts.map(p => p.id === post.id ? {...p, newCommentText: val} : p));
-                  }}
-                  className="flex-1 px-3 py-2 text-xs bg-zinc-50 dark:bg-zinc-800 border rounded-xl outline-none focus:ring-2 focus:ring-red-500"
+                  placeholder="जैसे: पाल्पाली टोपी, शिलाजीत..." 
+                  value={newTitle} 
+                  onChange={(e) => setNewTitle(e.target.value)} 
+                  required 
+                  className="w-full px-3 py-2 bg-zinc-50 dark:bg-zinc-800 border rounded-xl outline-none mt-1" 
                 />
-                <button type="submit" className="px-4 py-2 bg-red-600 text-white rounded-xl font-bold text-xs">
-                  भेजें
-                </button>
-              </form>
-            </div>
+              </div>
 
+              <div>
+                <label className="text-[10px] text-zinc-400 font-bold">कैटेगरी चुनें</label>
+                <select 
+                  value={newCategory} 
+                  onChange={(e) => setNewCategory(e.target.value)} 
+                  className="w-full px-3 py-2 bg-zinc-50 dark:bg-zinc-800 border rounded-xl outline-none mt-1"
+                >
+                  <option value="Medicines">Medicines (दवाइयां)</option>
+                  <option value="Food">Food (भोजन/मसाले)</option>
+                  <option value="Clothing">Clothing (कपड़े)</option>
+                  <option value="Cars">Cars (गाड़ियां)</option>
+                  <option value="Electronics">Electronics (इलेक्ट्रॉनिक्स)</option>
+                </select>
+              </div>
+
+              <div>
+                <label className="text-[10px] text-zinc-400 font-bold">कीमत (रु NPR)</label>
+                <input 
+                  type="number" 
+                  placeholder="जैसे: 500" 
+                  value={newPrice} 
+                  onChange={(e) => setNewPrice(e.target.value)} 
+                  required 
+                  className="w-full px-3 py-2 bg-zinc-50 dark:bg-zinc-800 border rounded-xl outline-none mt-1" 
+                />
+              </div>
+
+              <div>
+                <label className="text-[10px] text-zinc-400 font-bold">विवरण (Description)</label>
+                <textarea 
+                  placeholder="सामान के बारे में लिखें..." 
+                  value={newDesc} 
+                  onChange={(e) => setNewDesc(e.target.value)} 
+                  rows={2} 
+                  className="w-full px-3 py-2 bg-zinc-50 dark:bg-zinc-800 border rounded-xl outline-none mt-1" 
+                />
+              </div>
+
+              <div>
+                <label className="text-[10px] text-zinc-400 font-bold">फोटो इमेज URL</label>
+                <input 
+                  type="text" 
+                  placeholder="https://..." 
+                  value={newImage} 
+                  onChange={(e) => setNewImage(e.target.value)} 
+                  className="w-full px-3 py-2 bg-zinc-50 dark:bg-zinc-800 border rounded-xl outline-none mt-1" 
+                />
+              </div>
+
+              <button 
+                type="submit" 
+                className="w-full py-2.5 bg-emerald-600 hover:bg-emerald-700 text-white rounded-xl font-bold shadow transition"
+              >
+                मार्केटप्लेस पर पब्लिश करें
+              </button>
+            </form>
           </div>
-        ))}
-      </div>
+        </div>
+      )}
 
     </div>
   );
