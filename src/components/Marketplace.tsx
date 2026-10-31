@@ -1,5 +1,6 @@
+
 import React, { useState } from 'react';
-import { ProductItem } from '../types';
+import type { ProductItem } from '../types';
 import { CheckoutModal } from './CheckoutModal';
 import { Search, Share2, ShoppingBag, Check } from 'lucide-react';
 
@@ -42,27 +43,59 @@ const PRODUCTS: ProductItem[] = [
   },
 ];
 
-export const Marketplace: React.FC = () => {
+const Marketplace: React.FC = () => {
   const [selectedCategory, setSelectedCategory] = useState<string>('All');
   const [searchQuery, setSearchQuery] = useState('');
-  const [selectedProduct, setSelectedProduct] = useState<ProductItem | null>(null);
+  const [selectedProduct, setSelectedProduct] =
+    useState<ProductItem | null>(null);
   const [copiedId, setCopiedId] = useState<string | null>(null);
 
-  const categories = ['All', 'Medicines', 'Food', 'Clothing', 'Cars', 'Electronics'];
+  const categories = [
+    'All',
+    'Medicines',
+    'Food',
+    'Clothing',
+    'Cars',
+    'Electronics',
+  ];
 
-  const filteredProducts = PRODUCTS.filter((p) => {
-    const matchesCat = selectedCategory === 'All' || p.category === selectedCategory;
+  const filteredProducts = PRODUCTS.filter((product) => {
+    const matchesCategory =
+      selectedCategory === 'All' ||
+      product.category === selectedCategory;
+
+    const query = searchQuery.trim().toLowerCase();
+
     const matchesQuery =
-      p.title.toLowerCase().includes(searchQuery.toLowerCase()) ||
-      p.vendorName.toLowerCase().includes(searchQuery.toLowerCase());
-    return matchesCat && matchesQuery;
+      product.title.toLowerCase().includes(query) ||
+      product.vendorName.toLowerCase().includes(query) ||
+      product.description.toLowerCase().includes(query);
+
+    return matchesCategory && matchesQuery;
   });
 
-  const handleShare = (prod: ProductItem) => {
-    const link = `https://hellonepal.app/item/${prod.id}?ref=USER_AFFILIATE`;
-    navigator.clipboard.writeText(link);
-    setCopiedId(prod.id);
-    setTimeout(() => setCopiedId(null), 2000);
+  const handleShare = async (product: ProductItem) => {
+    const link = `https://hellonepal.app/item/${product.id}`;
+
+    try {
+      if (navigator.share) {
+        await navigator.share({
+          title: product.title,
+          text: product.description,
+          url: link,
+        });
+      } else if (navigator.clipboard?.writeText) {
+        await navigator.clipboard.writeText(link);
+        setCopiedId(product.id);
+        window.setTimeout(() => setCopiedId(null), 2000);
+      } else {
+        window.prompt('इस लिंक को कॉपी करें:', link);
+      }
+    } catch (error) {
+      if (error instanceof Error && error.name !== 'AbortError') {
+        window.prompt('इस लिंक को कॉपी करें:', link);
+      }
+    }
   };
 
   return (
@@ -73,104 +106,123 @@ export const Marketplace: React.FC = () => {
             <ShoppingBag className="w-6 h-6 text-red-600" />
             नेपाल लोकल मार्केटप्लेस
           </h2>
+
           <div className="relative w-full sm:w-72">
             <Search className="w-4 h-4 text-zinc-400 absolute left-3 top-3" />
+
             <input
               type="text"
               placeholder="लोकल सामान, दवाई, खाना खोजें..."
               value={searchQuery}
-              onChange={(e) => setSearchQuery(e.target.value)}
+              onChange={(event) => setSearchQuery(event.target.value)}
               className="w-full pl-9 pr-3 py-2 bg-white dark:bg-zinc-900 border border-zinc-200 dark:border-zinc-800 rounded-xl text-xs sm:text-sm focus:outline-none focus:ring-2 focus:ring-red-500"
             />
           </div>
         </div>
 
         <div className="flex items-center gap-2 overflow-x-auto pb-1 scrollbar-none">
-          {categories.map((cat) => (
+          {categories.map((category) => (
             <button
-              key={cat}
-              onClick={() => setSelectedCategory(cat)}
+              key={category}
+              type="button"
+              onClick={() => setSelectedCategory(category)}
               className={`px-3.5 py-1.5 rounded-full text-xs font-semibold whitespace-nowrap transition-colors ${
-                selectedCategory === cat
+                selectedCategory === category
                   ? 'bg-red-600 text-white'
                   : 'bg-zinc-100 dark:bg-zinc-800 text-zinc-600 dark:text-zinc-400 hover:bg-zinc-200'
               }`}
             >
-              {cat}
+              {category}
             </button>
           ))}
         </div>
       </div>
 
-      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
-        {filteredProducts.map((product) => (
-          <div
-            key={product.id}
-            className="bg-white dark:bg-zinc-900 border border-zinc-200 dark:border-zinc-800 rounded-2xl overflow-hidden shadow-sm hover:shadow-md transition-shadow flex flex-col justify-between"
-          >
-            <div>
-              <div className="relative h-48 w-full overflow-hidden bg-zinc-100 dark:bg-zinc-800">
-                <img
-                  src={product.imageUrl}
-                  alt={product.title}
-                  className="w-full h-full object-cover"
-                />
-                <span className="absolute top-3 left-3 bg-black/60 backdrop-blur-md text-white text-[10px] font-medium px-2.5 py-1 rounded-full">
-                  {product.category}
-                </span>
-              </div>
-              <div className="p-4 space-y-2">
-                <div className="text-xs text-zinc-500 dark:text-zinc-400 font-medium">
-                  {product.vendorName}
-                </div>
-                <h3 className="text-sm font-bold text-zinc-900 dark:text-zinc-100 line-clamp-1">
-                  {product.title}
-                </h3>
-                <p className="text-xs text-zinc-600 dark:text-zinc-300 line-clamp-2">
-                  {product.description}
-                </p>
-              </div>
-            </div>
+      {filteredProducts.length === 0 ? (
+        <div className="text-center py-12 text-zinc-500">
+          कोई सामान नहीं मिला। दूसरा नाम या कैटेगरी खोजें।
+        </div>
+      ) : (
+        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
+          {filteredProducts.map((product) => (
+            <div
+              key={product.id}
+              className="bg-white dark:bg-zinc-900 border border-zinc-200 dark:border-zinc-800 rounded-2xl overflow-hidden shadow-sm hover:shadow-md transition-shadow flex flex-col justify-between"
+            >
+              <div>
+                <div className="relative h-48 w-full overflow-hidden bg-zinc-100 dark:bg-zinc-800">
+                  <img
+                    src={product.imageUrl}
+                    alt={product.title}
+                    loading="lazy"
+                    className="w-full h-full object-cover"
+                  />
 
-            <div className="p-4 pt-0 space-y-3">
-              <div className="flex items-center justify-between">
-                <div>
-                  <span className="text-xs text-zinc-400">মূল्य</span>
-                  <div className="text-base font-extrabold text-red-600">
-                    रु {product.markupPrice}
-                  </div>
+                  <span className="absolute top-3 left-3 bg-black/60 backdrop-blur-md text-white text-[10px] font-medium px-2.5 py-1 rounded-full">
+                    {product.category}
+                  </span>
                 </div>
-                <div className="text-right">
-                  <span className="text-xs text-zinc-400">स्टॉक</span>
-                  <div className="text-xs font-semibold text-zinc-700 dark:text-zinc-300">
-                    {product.stockCount} पीस
+
+                <div className="p-4 space-y-2">
+                  <div className="text-xs text-zinc-500 dark:text-zinc-400 font-medium">
+                    {product.vendorName}
                   </div>
+
+                  <h3 className="text-sm font-bold text-zinc-900 dark:text-zinc-100 line-clamp-1">
+                    {product.title}
+                  </h3>
+
+                  <p className="text-xs text-zinc-600 dark:text-zinc-300 line-clamp-2">
+                    {product.description}
+                  </p>
                 </div>
               </div>
 
-              <div className="flex items-center gap-2">
-                <button
-                  onClick={() => setSelectedProduct(product)}
-                  className="flex-1 bg-red-600 hover:bg-red-700 text-white py-2 rounded-xl text-xs font-bold transition-colors shadow-sm"
-                >
-                  खरीदें (Buy Now)
-                </button>
-                <button
-                  onClick={() => handleShare(product)}
-                  className="p-2 bg-zinc-100 dark:bg-zinc-800 hover:bg-zinc-200 dark:hover:bg-zinc-700 text-zinc-700 dark:text-zinc-300 rounded-xl transition-colors"
-                  title="शेयर करें"
-                >
-                  {copiedId === product.id ? (
-                    <Check className="w-4 h-4 text-green-600" />
-                  ) : (
-                    <Share2 className="w-4 h-4" />
-                  )}
-                </button>
+              <div className="p-4 pt-0 space-y-3">
+                <div className="flex items-center justify-between">
+                  <div>
+                    <span className="text-xs text-zinc-400">मूल्य</span>
+                    <div className="text-base font-extrabold text-red-600">
+                      रु {product.markupPrice}
+                    </div>
+                  </div>
+
+                  <div className="text-right">
+                    <span className="text-xs text-zinc-400">स्टॉक</span>
+                    <div className="text-xs font-semibold text-zinc-700 dark:text-zinc-300">
+                      {product.stockCount} पीस
+                    </div>
+                  </div>
+                </div>
+
+                <div className="flex items-center gap-2">
+                  <button
+                    type="button"
+                    onClick={() => setSelectedProduct(product)}
+                    className="flex-1 bg-red-600 hover:bg-red-700 text-white py-2 rounded-xl text-xs font-bold transition-colors shadow-sm"
+                  >
+                    खरीदें (Buy Now)
+                  </button>
+
+                  <button
+                    type="button"
+                    onClick={() => handleShare(product)}
+                    className="p-2 bg-zinc-100 dark:bg-zinc-800 hover:bg-zinc-200 dark:hover:bg-zinc-700 text-zinc-700 dark:text-zinc-300 rounded-xl transition-colors"
+                    title="शेयर करें"
+                    aria-label="सामान शेयर करें"
+                  >
+                    {copiedId === product.id ? (
+                      <Check className="w-4 h-4 text-green-600" />
+                    ) : (
+                      <Share2 className="w-4 h-4" />
+                    )}
+                  </button>
+                </div>
               </div>
             </div>
-          </div>
-        ))}
-      </div>
+          ))}
+        </div>
+      )}
 
       {selectedProduct && (
         <CheckoutModal
@@ -181,3 +233,5 @@ export const Marketplace: React.FC = () => {
     </div>
   );
 };
+
+export default Marketplace;
