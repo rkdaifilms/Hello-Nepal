@@ -7,8 +7,8 @@ export default function RideBooking() {
   const mapInstance = useRef<L.Map | null>(null);
   const routeLayerRef = useRef<L.LayerGroup | null>(null);
 
-  const [pickup, setPickup] = useState<string>('Bairahawa');
-  const [dropoff, setDropoff] = useState<string>('Butwal');
+  const [pickup, setPickup] = useState<string>('Bhujauli, Siddharthanagar');
+  const [dropoff, setDropoff] = useState<string>('Bairahawa');
   const [vehicle, setVehicle] = useState<string>('bike'); // bike, auto, car
   const [routeInfo, setRouteInfo] = useState<string>('रूट खोजा जा रहा है...');
   const [distanceKm, setDistanceKm] = useState<number>(22.5);
@@ -18,6 +18,13 @@ export default function RideBooking() {
   const [showPaymentModal, setShowPaymentModal] = useState<boolean>(false);
   const [paymentMethod, setPaymentMethod] = useState<string>('cash');
   const [bookingConfirmed, setBookingConfirmed] = useState<boolean>(false);
+  
+  // रियल मर्चेंट और पेमेंट स्टेट्स
+  const [merchantQr, setMerchantQr] = useState<string>('');
+  const [isSettingQr, setIsSettingQr] = useState<boolean>(false);
+  const [walletPhone, setWalletPhone] = useState<string>('');
+  const [mPin, setMPin] = useState<string>('');
+
   const [assignedDriver] = useState({
     name: 'Bishal Thapa',
     phone: '+977-9847000000',
@@ -235,12 +242,12 @@ export default function RideBooking() {
 
       </div>
 
-      {/* पेमेंट और पेआउट सिस्टम मॉडल */}
+      {/* पेमेंट और पेआउट सिस्टम मॉडल (रियल मर्चेंट QR और वॉलेट सपोर्ट) */}
       {showPaymentModal && (
         <div style={{ position: 'fixed', top: 0, left: 0, width: '100vw', height: '100vh', background: 'rgba(0,0,0,0.6)', zIndex: 2000, display: 'flex', justifyContent: 'center', alignItems: 'flex-end' }}>
-          <div style={{ background: '#fff', width: '100%', maxWidth: '400px', borderTopLeftRadius: '16px', borderTopRightRadius: '16px', padding: '15px', boxSizing: 'border-box' }}>
+          <div style={{ background: '#fff', width: '100%', maxWidth: '400px', borderTopLeftRadius: '16px', borderTopRightRadius: '16px', padding: '15px', boxSizing: 'border-box', maxHeight: '90vh', overflowY: 'auto' }}>
             <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '10px' }}>
-              <h3 style={{ margin: 0, fontSize: '15px', color: '#1e293b' }}>भुगतान (Payment) का तरीका चुनें</h3>
+              <h3 style={{ margin: 0, fontSize: '15px', color: '#1e293b' }}>वास्तविक भुगतान (Real Payment) चुनें</h3>
               <button onClick={() => setShowPaymentModal(false)} style={{ background: 'none', border: 'none', fontSize: '16px', cursor: 'pointer', fontWeight: 'bold' }}>✕</button>
             </div>
 
@@ -249,7 +256,38 @@ export default function RideBooking() {
               <span style={{ color: '#16a34a' }}>Rs. {totalFare} NPR</span>
             </div>
 
-            <div style={{ display: 'flex', flexDirection: 'column', gap: '6px', marginBottom: '15px', fontSize: '13px' }}>
+            {/* ड्राइवर मर्चेंट QR सेट करने का विकल्प */}
+            <div style={{ marginBottom: '12px', background: '#fffbeb', border: '1px solid #fde68a', padding: '8px', borderRadius: '6px' }}>
+              <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                <span style={{ fontSize: '11px', fontWeight: 'bold', color: '#b45309' }}>ड्राइवर मर्चेंट QR स्कैनर:</span>
+                <button 
+                  onClick={() => setIsSettingQr(!isSettingQr)} 
+                  style={{ background: '#d97706', color: '#fff', border: 'none', padding: '2px 6px', fontSize: '10px', borderRadius: '4px', cursor: 'pointer', fontWeight: 'bold' }}
+                >
+                  {isSettingQr ? 'बंद करें' : 'QR सेट करें'}
+                </button>
+              </div>
+              {isSettingQr && (
+                <div style={{ marginTop: '6px' }}>
+                  <input 
+                    type="text" 
+                    placeholder="अपना QR इमेज URL यहाँ पेस्ट करें..." 
+                    value={merchantQr}
+                    onChange={(e) => setMerchantQr(e.target.value)}
+                    style={{ width: '100%', padding: '6px', fontSize: '11px', border: '1px solid #cbd5e1', borderRadius: '4px', boxSizing: 'border-box' }}
+                  />
+                </div>
+              )}
+              {merchantQr && !isSettingQr && (
+                <div style={{ textAlign: 'center', marginTop: '6px' }}>
+                  <img src={merchantQr} alt="Merchant QR" style={{ width: '90px', height: '90px', objectFit: 'contain', border: '1px solid #ccc', borderRadius: '4px' }} />
+                  <p style={{ fontSize: '9px', color: '#666', margin: '2px 0 0' }}>स्कैन करके पेमेंट करें</p>
+                </div>
+              )}
+            </div>
+
+            {/* भुगतान के 4 विकल्प */}
+            <div style={{ display: 'flex', flexDirection: 'column', gap: '6px', marginBottom: '12px', fontSize: '13px' }}>
               <label style={{ display: 'flex', alignItems: 'center', gap: '8px', padding: '8px', border: paymentMethod === 'cash' ? '2px solid #2563eb' : '1px solid #cbd5e1', borderRadius: '6px', cursor: 'pointer' }}>
                 <input type="radio" name="pay" checked={paymentMethod === 'cash'} onChange={() => setPaymentMethod('cash')} />
                 <span style={{ fontWeight: 'bold' }}>💵 नकद भुगतान (Cash on Ride)</span>
@@ -257,17 +295,43 @@ export default function RideBooking() {
 
               <label style={{ display: 'flex', alignItems: 'center', gap: '8px', padding: '8px', border: paymentMethod === 'esewa' ? '2px solid #16a34a' : '1px solid #cbd5e1', borderRadius: '6px', cursor: 'pointer' }}>
                 <input type="radio" name="pay" checked={paymentMethod === 'esewa'} onChange={() => setPaymentMethod('esewa')} />
-                <span style={{ fontWeight: 'bold' }}>🟢 eSewa (डिजिटल वालेट पेआउट)</span>
+                <span style={{ fontWeight: 'bold' }}>🟢 eSewa (मोबाइल / M-PIN पेमेंट)</span>
+              </label>
+
+              <label style={{ display: 'flex', alignItems: 'center', gap: '8px', padding: '8px', border: paymentMethod === 'imepay' ? '2px solid #ea580c' : '1px solid #cbd5e1', borderRadius: '6px', cursor: 'pointer' }}>
+                <input type="radio" name="pay" checked={paymentMethod === 'imepay'} onChange={() => setPaymentMethod('imepay')} />
+                <span style={{ fontWeight: 'bold' }}>🟠 IME Pay (डिजिटल पेआउट)</span>
               </label>
 
               <label style={{ display: 'flex', alignItems: 'center', gap: '8px', padding: '8px', border: paymentMethod === 'khalti' ? '2px solid #5d2e8c' : '1px solid #cbd5e1', borderRadius: '6px', cursor: 'pointer' }}>
                 <input type="radio" name="pay" checked={paymentMethod === 'khalti'} onChange={() => setPaymentMethod('khalti')} />
-                <span style={{ fontWeight: 'bold' }}>🟣 Khalti Wallet</span>
+                <span style={{ fontWeight: 'bold' }}>🟣 Khalti Wallet (रियल पेमेंट)</span>
               </label>
             </div>
 
+            {/* यदि डिजिटल पेमेंट (eSewa, IME Pay, Khalti) चुना गया हो */}
+            {paymentMethod !== 'cash' && (
+              <div style={{ background: '#f8fafc', padding: '10px', borderRadius: '6px', border: '1px solid #e2e8f0', marginBottom: '12px', display: 'flex', flexDirection: 'column', gap: '8px' }}>
+                <div style={{ fontSize: '11px', fontWeight: 'bold', color: '#334155' }}>{paymentMethod.toUpperCase()} विवरण दर्ज करें:</div>
+                <input 
+                  type="text" 
+                  placeholder="मोबाइल नंबर (जैसे: 98XXXXXXXX)" 
+                  value={walletPhone}
+                  onChange={(e) => setWalletPhone(e.target.value)}
+                  style={{ width: '100%', padding: '6px 8px', fontSize: '12px', border: '1px solid #cbd5e1', borderRadius: '4px', boxSizing: 'border-box' }}
+                />
+                <input 
+                  type="password" 
+                  placeholder="M-PIN / Password" 
+                  value={mPin}
+                  onChange={(e) => setMPin(e.target.value)}
+                  style={{ width: '100%', padding: '6px 8px', fontSize: '12px', border: '1px solid #cbd5e1', borderRadius: '4px', boxSizing: 'border-box' }}
+                />
+              </div>
+            )}
+
             <button onClick={handleConfirmBooking} style={{ width: '100%', background: '#16a34a', color: '#fff', border: 'none', padding: '10px', borderRadius: '6px', fontSize: '14px', fontWeight: 'bold', cursor: 'pointer' }}>
-              राइड कन्फर्म करें
+              रियल पेमेंट कन्फर्म करें
             </button>
           </div>
         </div>
