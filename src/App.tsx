@@ -2,8 +2,8 @@ import React, { useEffect, useRef, useState } from 'react';
 import mapboxgl from 'mapbox-gl';
 import 'mapbox-gl/dist/mapbox-gl.css';
 
-// यहाँ अपना Mapbox Access Token डाल लेना भाई
-mapboxgl.accessToken = 'YOUR_MAPBOX_ACCESS_TOKEN';
+// तेरा Mapbox Access Token यहाँ सेट कर दिया है भाई
+mapboxgl.accessToken = 'pk.eyJ1IjoicmtkYWlmaWxtcyIsImEiOiJjbXZveDdtOHUweGIyMnpxeGtxemJjODV5In0.2BCQn8iiApvGhcXV-ez8Vg';
 
 export default function App() {
   const mapContainer = useRef<HTMLDivElement>(null);
@@ -14,33 +14,26 @@ export default function App() {
   const [routeInfo, setRouteInfo] = useState('दूरी: 4.0 किमी | समय: 12 मिनट');
 
   useEffect(() => {
-    if (map.current) return; // मैप दोबारा इनिशियलाइज न हो
+    if (map.current) return;
 
     if (mapContainer.current) {
       map.current = new mapboxgl.Map({
         container: mapContainer.current,
-        style: 'mapbox://styles/mapbox/streets-v12',
+        style: 'mapbox://styles/mapbox/streets-v12', // यहाँ से काली स्क्रीन हट जाएगी और साफ रास्ता दिखेगा
         center: [83.4772, 27.5042], // भैरहवा, नेपाल का सटीक कोऑर्डिनेट
         zoom: 13
       });
 
-      // डिफ़ॉल्ट पिन जोड़ें
+      // मैप पर पिन जोड़ें
       new mapboxgl.Marker({ color: '#ef4444' })
         .setLngLat([83.4772, 27.5042])
         .addTo(map.current);
     }
   }, []);
 
-  // रूट खोजने और लोकेशन अपडेट करने का फंक्शन
   const handleFindRoute = () => {
-    // यहाँ तू अपनी कोडिंग के हिसाब से पिकअप/ड्रॉपऑफ के कोऑर्डिनेट बदल सकता है भाई
-    console.لت('Searching route from:', pickup, 'to:', dropoff);
-    
-    // उदाहरण के लिए डमी अपडेट (इसे वास्तविक मैप बॉक्स डायरेक्शंस API से जोड़ सकते हैं)
     setRouteInfo(`रूट अपडेटेड: ${pickup} से ${dropoff}`);
-    
     if (map.current) {
-      // उदाहरण के लिए मैप को थोड़ा फ्लाई या री-सेंटर करना
       map.current.flyTo({
         center: [83.4772, 27.5042],
         zoom: 14
@@ -51,7 +44,7 @@ export default function App() {
   return (
     <div style={{ position: 'relative', width: '100vw', height: '100vh', fontFamily: 'sans-serif', overflow: 'hidden' }}>
       
-      {/* मैप को ऊपर से थोड़ी जगह छोड़कर नीचे सेट किया है ताकि ओवरलैप न हो */}
+      {/* मैप दिखने वाली स्क्रीन (ऊपर का हिस्सा) */}
       <div 
         ref={mapContainer} 
         style={{ 
@@ -59,18 +52,18 @@ export default function App() {
           top: '0', 
           left: '0', 
           width: '100%', 
-          height: '60vh', // मैप की हाइट छोटी कर दी है भाई ताकि नीचे स्पेस मिले
+          height: '55vh', 
           zIndex: 1 
         }} 
       />
 
-      {/* ऊपर सर्च और बुकिंग फ्लोटिंग पैनल (InDrive / Pathao जैसा लुक) */}
+      {/* नीचे इनड्राइव (InDrive) जैसा शानदार बुकिंग पैनल */}
       <div style={{
         position: 'absolute',
         bottom: '0',
         left: '0',
         width: '100%',
-        height: '42vh',
+        height: '45vh',
         background: '#ffffff',
         padding: '20px 15px',
         borderTopLeftRadius: '24px',
