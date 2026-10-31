@@ -5,12 +5,12 @@ import 'mapbox-gl/dist/mapbox-gl.css';
 mapboxgl.accessToken = 'pk.eyJ1IjoicmtkYWlmaWxtcyIsImEiOiJjbXZveDdtOHUweGIyMnpxeGtxemJjODV5In0.2BCQn8iiApvGhcXV-ez8Vg';
 
 export default function App() {
-  const mapContainer = useRef<HTMLDivElement>(null);
-  const map = useRef<mapboxgl.Map | null>(null);
+  const mapContainer = useRef(null);
+  const map = useRef(null);
 
   const [pickup, setPickup] = useState('भैरहवा, नेपाल');
   const [dropoff, setDropoff] = useState('Lumbini, Nepal');
-  const [routeInfo, setRouteInfo] = useState('जगह लिखकर 'रास्ता खोजें' दबाएं');
+  const [routeInfo, setRouteInfo] = useState('जगह लिखकर रास्ता खोजें दबाएं');
 
   useEffect(() => {
     if (map.current) return;
@@ -23,21 +23,18 @@ export default function App() {
         zoom: 12
       });
 
-      // पहली बार डिफ़ॉल्ट रूट लोड करें
       map.current.on('load', () => {
         handleFindRoute();
       });
     }
   }, []);
 
-  // Geocoding और Directions API का फंक्शन
   const handleFindRoute = async () => {
     if (!map.current) return;
 
     try {
       setRouteInfo('रास्ता खोजा जा रहा है...');
 
-      // 1. Pickup लोकेशन के कोऑर्डिनेट्स खोजें
       const pickupQuery = await fetch(
         `https://api.mapbox.com/geocoding/v5/mapbox.places/${encodeURIComponent(pickup)}.json?access_token=${mapboxgl.accessToken}&limit=1`
       );
@@ -46,9 +43,8 @@ export default function App() {
         setRouteInfo('पिकअप लोकेशन नहीं मिली!');
         return;
       }
-      const startCoord: [number, number] = pickupJson.features[0].center;
+      const startCoord = pickupJson.features[0].center;
 
-      // 2. Dropoff लोकेशन के कोऑर्डिनेट्स खोजें
       const dropoffQuery = await fetch(
         `https://api.mapbox.com/geocoding/v5/mapbox.places/${encodeURIComponent(dropoff)}.json?access_token=${mapboxgl.accessToken}&limit=1`
       );
@@ -57,9 +53,8 @@ export default function App() {
         setRouteInfo('ड्रॉपऑफ लोकेशन नहीं मिली!');
         return;
       }
-      const endCoord: [number, number] = dropoffJson.features[0].center;
+      const endCoord = dropoffJson.features[0].center;
 
-      // 3. दोनों के बीच Directions (रूट) निकालें
       const routeQuery = await fetch(
         `https://api.mapbox.com/directions/v5/mapbox/driving/${startCoord[0]},${startCoord[1]};${endCoord[0]},${endCoord[1]}?geometries=geojson&access_token=${mapboxgl.accessToken}`
       );
@@ -77,9 +72,8 @@ export default function App() {
       const durationMin = Math.round(data.duration / 60);
       setRouteInfo(`दूरी: ${distanceKm} किमी | समय: ${durationMin} मिनट`);
 
-      // 4. मैप पर रूट लाइन अपडेट करें
       if (map.current.getSource('route')) {
-        (map.current.getSource('route') as mapboxgl.GeoJSONSource).setData({
+        map.current.getSource('route').setData({
           type: 'Feature',
           properties: {},
           geometry: routeGeoJSON
@@ -109,14 +103,12 @@ export default function App() {
         });
       }
 
-      // पुराने सारे पिन हटाकर नए पिन लगाएं (या मार्कर अपडेट करें)
       new mapboxgl.Marker({ color: '#10b981' }).setLngLat(startCoord).addTo(map.current);
       new mapboxgl.Marker({ color: '#ef4444' }).setLngLat(endCoord).addTo(map.current);
 
-      // मैप को रूट के हिसाब से फिट करें
       const coordinates = routeGeoJSON.coordinates;
-      const bounds = coordinates.reduce((b: mapboxgl.LngLatBounds, coord: number[]) => {
-        return b.extend(coord as [number, number]);
+      const bounds = coordinates.reduce((b, coord) => {
+        return b.extend(coord);
       }, new mapboxgl.LngLatBounds(coordinates[0], coordinates[0]));
 
       map.current.fitBounds(bounds, { padding: 60 });
@@ -130,7 +122,6 @@ export default function App() {
   return (
     <div style={{ position: 'relative', width: '100vw', height: '100vh', fontFamily: 'sans-serif', overflow: 'hidden' }}>
       
-      {/* ऊपर मैप स्क्रीन */}
       <div 
         ref={mapContainer} 
         style={{ 
@@ -143,7 +134,6 @@ export default function App() {
         }} 
       />
 
-      {/* नीचे बुकिंग और सर्च पैनल */}
       <div style={{
         position: 'absolute',
         bottom: '0',
