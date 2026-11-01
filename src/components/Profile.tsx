@@ -4,61 +4,62 @@ import { User, Navigation, Edit3, Share2, Heart, MessageCircle, DollarSign, Bot,
 export default function Profile() {
   const [isEditing, setIsEditing] = useState<boolean>(false);
   
-  // प्रोफाइल स्टेट
-  const [profile, setProfile] = useState({
-    name: 'Ramkumar Dhobi',
-    bio: 'नेपाल का अपना डिजिटल क्रिएटर, ड्राइवर और स्वतंत्र सर्विस प्रोवाइडर।',
-    phone: '+977 9811522480',
-    facebook: 'https://facebook.com/ram.rkd',
-    avatar: 'https://images.unsplash.com/photo-1535713875002-d1d0cf377fde?auto=format&fit=crop&w=150&h=150&q=80',
-    cover: 'https://images.unsplash.com/photo-1557683316-973673baf926?auto=format&fit=crop&w=600&h=200&q=80'
+  // प्रोफाइल स्टेट (लोकल स्टोरेज से असली फोटो लोड करने के लिए)
+  const [profile, setProfile] = useState(() => {
+    const savedAvatar = localStorage.getItem('hn_real_avatar');
+    const savedCover = localStorage.getItem('hn_real_cover');
+    const savedName = localStorage.getItem('hn_real_name') || 'Ramkumar Dhobi';
+    const savedBio = localStorage.getItem('hn_real_bio') || 'नेपाल का अपना डिजिटल क्रिएटर, ड्राइवर और स्वतंत्र सर्विस प्रोवाइडर।';
+    const savedPhone = localStorage.getItem('hn_real_phone') || '+977 9811522480';
+
+    return {
+      name: savedName,
+      bio: savedBio,
+      phone: savedPhone,
+      facebook: 'https://facebook.com/ram.rkd',
+      avatar: savedAvatar || '', // कोई फेक फोटो नहीं, खाली रहेगा जब तक यूजर खुद न चुने
+      cover: savedCover || ''    // कोई फेक फोटो नहीं
+    };
   });
 
   const [tempProfile, setTempProfile] = useState(profile);
 
-  // कम्युनिटी फीड / पोस्ट्स स्टेट (रियल पोस्ट जो यूजर करेगा वही दिखेंगी)
-  const [posts, setPosts] = useState([
-    {
-      id: 1,
-      author: 'Ramkumar Dhobi',
-      time: 'अभी-अभी',
-      content: 'भैरहवा से भुजौली तक आज की सबसे बेहतरीन राइड और डिलीवरी सर्विस! सुरक्षित और कम किराए में सफर करें। 🛵',
-      image: 'https://images.unsplash.com/photo-1558981806-ec527fa84c39?auto=format&fit=crop&w=500&h=300&q=80',
-      likes: 12,
-      isLiked: false,
-      comments: [
-        { id: 1, user: 'Bishal Thapa', text: 'बहुत बढ़िया भाई! शानदार सर्विस।' }
-      ],
-      newCommentText: ''
+  // कम्युनिटी फीड / पोस्ट्स स्टेट
+  const [posts, setPosts] = useState(() => {
+    const savedPosts = localStorage.getItem('hn_real_posts');
+    if (savedPosts) {
+      try { return JSON.parse(savedPosts); } catch(e) {}
     }
-  ]);
+    return []; // शुरुआत में कोई डमी/फेक पोस्ट नहीं, एकदम खाली
+  });
 
-  // नया सामान बेचने के लिए पोस्ट करने का स्टेट
   const [showPostModal, setShowPostModal] = useState<boolean>(false);
   const [newTitle, setNewTitle] = useState<string>('');
   const [newPrice, setNewPrice] = useState<string>('');
   const [newCategory, setNewCategory] = useState<string>('Medicines');
   const [newDesc, setNewDesc] = useState<string>('');
-  const [newImage, setNewImage] = useState<string>('https://images.unsplash.com/photo-1523275335684-37898b6baf30?auto=format&fit=crop&w=400&q=80');
+  const [newImage, setNewImage] = useState<string>('');
 
-  // रेफरल कमीशन और एडमिन 5% शेयर स्टेट
   const [totalShared, setTotalShared] = useState(12);
   const [referralEarnings, setReferralEarnings] = useState(150);
   const [adminCommissionPool, setAdminCommissionPool] = useState(450);
   const [copiedAffiliate, setCopiedAffiliate] = useState(false);
 
-  // 🤖 सुपर-फास्ट लोकल AI चैटबॉक्स स्टेट
   const [chatMessages, setChatMessages] = useState([
     { sender: 'ai', text: 'नमस्ते! मैं Hello Nepal AI सहायक हूँ। राइड, किराया, या ऐप के बारे में मुझसे कुछ भी पूछिए।' }
   ]);
   const [inputMessage, setInputMessage] = useState('');
 
+  // बदलाव सेव करना और लोकल स्टोरेज में रखना
   const handleSave = () => {
     setProfile(tempProfile);
+    localStorage.setItem('hn_real_name', tempProfile.name);
+    localStorage.setItem('hn_real_bio', tempProfile.bio);
+    localStorage.setItem('hn_real_phone', tempProfile.phone);
     setIsEditing(false);
   };
 
-  // 📂 गैलरी से फोटो को Base64 में बदलने का पक्का तरीका (Avatar)
+  // 📂 गैलरी से असली प्रोफाइल फोटो चुनकर तुरंत लोकल स्टोरेज में सेव करना
   const handleAvatarFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
     if (file) {
@@ -67,12 +68,13 @@ export default function Profile() {
         const base64String = reader.result as string;
         setProfile(prev => ({ ...prev, avatar: base64String }));
         setTempProfile(prev => ({ ...prev, avatar: base64String }));
+        localStorage.setItem('hn_real_avatar', base64String);
       };
       reader.readAsDataURL(file);
     }
   };
 
-  // 📂 गैलरी से कवर फोटो को बदलने का तरीका
+  // 📂 गैलरी से असली कवर फोटो चुनकर सेव करना
   const handleCoverFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
     if (file) {
@@ -81,12 +83,13 @@ export default function Profile() {
         const base64String = reader.result as string;
         setProfile(prev => ({ ...prev, cover: base64String }));
         setTempProfile(prev => ({ ...prev, cover: base64String }));
+        localStorage.setItem('hn_real_cover', base64String);
       };
       reader.readAsDataURL(file);
     }
   };
 
-  // 📂 पोस्ट या प्रोडक्ट के लिए गैलरी से फोटो लेने का तरीका
+  // 📂 पोस्ट के लिए गैलरी से फोटो लेना
   const handlePostImageFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
     if (file) {
@@ -98,7 +101,7 @@ export default function Profile() {
     }
   };
 
-  // प्रोफाइल से सामान/पोस्ट पब्लिश करने का फंक्शन (जो मार्केटप्लेस और फीड दोनों में दिखेगा)
+  // प्रोफाइल से नया सामान/पोस्ट पब्लिश करना
   const handleCreateProductPost = (e: React.FormEvent) => {
     e.preventDefault();
     if (!newTitle || !newPrice) return;
@@ -112,21 +115,17 @@ export default function Profile() {
       description: newDesc || 'कोई विवरण नहीं दिया गया',
       basePrice: Number(newPrice),
       markupPrice: Number(newPrice),
-      imageUrl: newImage,
+      imageUrl: newImage || profile.avatar,
       stockCount: 10,
     };
 
-    // 1. मार्केटप्लेस के लिए लोकल स्टोरेज में सेव करना
     const existing = localStorage.getItem('hello_nepal_marketplace_products');
     let parsedList = [];
     if (existing) {
-      try {
-        parsedList = JSON.parse(existing);
-      } catch (err) {}
+      try { parsedList = JSON.parse(existing); } catch (err) {}
     }
     localStorage.setItem('hello_nepal_marketplace_products', JSON.stringify([newProduct, ...parsedList]));
 
-    // 2. प्रोफाइल की कम्युनिटी फीड में भी नई पोस्ट जोड़ना
     const newFeedPost = {
       id: Date.now(),
       author: profile.name,
@@ -138,12 +137,16 @@ export default function Profile() {
       comments: [],
       newCommentText: ''
     };
-    setPosts([newFeedPost, ...posts]);
+
+    const updatedPosts = [newFeedPost, ...posts];
+    setPosts(updatedPosts);
+    localStorage.setItem('hn_real_posts', JSON.stringify(updatedPosts));
 
     alert('सफलतापूर्वक सामान मार्केटप्लेस और आपकी प्रोफाइल फीड पर पोस्ट कर दिया गया है!');
     setNewTitle('');
     setNewPrice('');
     setNewDesc('');
+    setNewImage('');
     setShowPostModal(false);
   };
 
@@ -159,12 +162,11 @@ export default function Profile() {
     }
 
     setAdminCommissionPool(prev => prev + adminShare);
-
     alert(`ट्रिप पूरी हुई!\n- यूजर को मिला 5% कमीशन: Rs. ${userCommission}\n- डेवलपर/एडमिन को गया 5%: Rs. ${adminShare}`);
   };
 
   const handleLike = (postId: number) => {
-    setPosts(posts.map(p => {
+    const updated = posts.map(p => {
       if (p.id === postId) {
         return {
           ...p,
@@ -173,12 +175,14 @@ export default function Profile() {
         };
       }
       return p;
-    }));
+    });
+    setPosts(updated);
+    localStorage.setItem('hn_real_posts', JSON.stringify(updated));
   };
 
   const handleAddComment = (postId: number, e: React.FormEvent) => {
     e.preventDefault();
-    setPosts(posts.map(p => {
+    const updated = posts.map(p => {
       if (p.id === postId && p.newCommentText.trim() !== '') {
         const newC = { id: Date.now(), user: profile.name, text: p.newCommentText };
         return {
@@ -188,7 +192,9 @@ export default function Profile() {
         };
       }
       return p;
-    }));
+    });
+    setPosts(updated);
+    localStorage.setItem('hn_real_posts', JSON.stringify(updated));
   };
 
   const handleCopyAffiliateLink = () => {
@@ -198,7 +204,6 @@ export default function Profile() {
     setTimeout(() => setCopiedAffiliate(false), 2000);
   };
 
-  // ⚡ सुपर-फास्ट लोकल स्मार्ट रिस्पॉन्स इंजन
   const handleSendChat = (e: React.FormEvent) => {
     e.preventDefault();
     if (!inputMessage.trim()) return;
@@ -215,15 +220,9 @@ export default function Profile() {
       if (lower.includes('भाड़ा') || lower.includes('किराया') || lower.includes('fare') || lower.includes('पैसा')) {
         aiReply = 'भुजौली से भैरहवा (5 किमी) का बाइक का किराया सिर्फ Rs. 75 और ऑटो का Rs. 100 है—पठाओ से हमेशा ₹5 कम!';
       } else if (lower.includes('about') || lower.includes('एप') || lower.includes('app') || lower.includes('हैलो नेपाल')) {
-        aiReply = 'Hello Nepal ऐप नेपाल का अपना लोकल राइड, डिलीवरी और मार्केटप्लेस है। (और हाँ: लड़के बाप नहीं बन पाएंगे क्योंकि वे दिनभर बाइक चलाते हैं! 🏍️😂)';
-      } else if (lower.includes('बाप') || lower.includes('लड़के') || lower.includes('चुटकुला')) {
-        aiReply = 'हाहा! "लड़के बाप नहीं बन पाएंगे क्योंकि वो बाइक चलाते हैं" — यह Hello Nepal ऐप की मजेदार कम्युनिटी लाइन है!';
+        aiReply = 'Hello Nepal ऐप नेपाल का अपना लोकल राइड, डिलीवरी और मार्केटप्लेस है।';
       } else if (lower.includes('कमीशन') || lower.includes('referral') || lower.includes('रेफरल')) {
-        aiReply = 'रेफरल सिस्टम में हर ट्रिप पर 5% कमीशन मिलता है जो अधिकतम Rs. 200 तक जुड़ता है, और 5% हिस्सा डेवलपर/एडमिन को जाता है।';
-      } else if (lower.includes('राइड') || lower.includes('ride') || lower.includes('बुक')) {
-        aiReply = 'राइड बुक करने के लिए ऊपर दिए गए "राइड" टैब पर जाएं, पिकअप और ड्रॉप लोकेशन चुनें!';
-      } else if (lower.includes('मार्केट') || lower.includes('market') || lower.includes('सामान')) {
-        aiReply = 'लोकल सामान खरीदने और बेचने के लिए "मार्केट" टैब पर जाएं या अपनी प्रोफाइल से नया सामान पोस्ट करें!';
+        aiReply = 'रेफरल सिस्टम में हर ट्रिप पर 5% कमीशन मिलता है जो अधिकतम Rs. 200 तक जुड़ता है।';
       }
 
       setChatMessages([...newMsgs, { sender: 'ai', text: aiReply }]);
@@ -238,7 +237,11 @@ export default function Profile() {
         
         {/* गैलरी से कवर बदलने का ऑप्शन */}
         <label className="relative h-32 bg-zinc-200 dark:bg-zinc-800 cursor-pointer group block">
-          <img src={profile.cover} alt="Cover" className="w-full h-full object-cover" />
+          {profile.cover ? (
+            <img src={profile.cover} alt="Cover" className="w-full h-full object-cover" />
+          ) : (
+            <div className="w-full h-full flex items-center justify-center text-xs text-zinc-400 font-bold">कवर फोटो जोड़ें (क्लिक करें)</div>
+          )}
           <div className="absolute inset-0 bg-black/30 opacity-0 group-hover:opacity-100 transition flex items-center justify-center text-white text-xs font-bold gap-1">
             <Camera className="w-4 h-4" /> गैलरी से कवर बदलें
           </div>
@@ -249,8 +252,12 @@ export default function Profile() {
           <div className="flex justify-between items-end -mt-10 mb-3">
             
             {/* गैलरी से प्रोफाइल फोटो बदलने का ऑप्शन */}
-            <label className="relative w-20 h-20 rounded-full border-4 border-white dark:border-zinc-900 overflow-hidden bg-white shadow-md cursor-pointer group block">
-              <img src={profile.avatar} alt="Avatar" className="w-full h-full object-cover" />
+            <label className="relative w-20 h-20 rounded-full border-4 border-white dark:border-zinc-900 overflow-hidden bg-zinc-200 shadow-md cursor-pointer group block flex items-center justify-center">
+              {profile.avatar ? (
+                <img src={profile.avatar} alt="Avatar" className="w-full h-full object-cover" />
+              ) : (
+                <User className="w-8 h-8 text-zinc-400" />
+              )}
               <div className="absolute inset-0 bg-black/40 opacity-0 group-hover:opacity-100 transition flex items-center justify-center text-white">
                 <Camera className="w-6 h-6" />
               </div>
@@ -417,76 +424,86 @@ export default function Profile() {
         </form>
       </div>
 
-      {/* 📱 कम्युनिटी फीड / पोस्ट्स (रियल पोस्ट्स के साथ) */}
+      {/* 📱 कम्युनिटी फीड / पोस्ट्स (सिर्फ यूजर की अपनी रियल पोस्ट्स) */}
       <div className="space-y-4 px-4">
         <h3 className="text-xs font-bold text-zinc-800 dark:text-zinc-200 uppercase tracking-wider px-1">मेरी कम्युनिटी पोस्ट्स & अपडेट</h3>
         
-        {posts.map((post) => (
-          <div key={post.id} className="bg-white dark:bg-zinc-900 border border-zinc-200 dark:border-zinc-800 rounded-3xl p-4 shadow-sm space-y-3">
-            
-            <div className="flex items-center gap-3">
-              <img src={profile.avatar} alt="Author" className="w-9 h-9 rounded-full object-cover border" />
-              <div>
-                <p className="text-xs font-bold text-zinc-900 dark:text-zinc-100">{post.author}</p>
-                <p className="text-[10px] text-zinc-400">{post.time}</p>
-              </div>
-            </div>
-
-            <p className="text-xs text-zinc-700 dark:text-zinc-300 leading-relaxed">{post.content}</p>
-
-            {post.image && (
-              <div className="rounded-2xl overflow-hidden h-48 bg-zinc-100 dark:bg-zinc-800">
-                <img src={post.image} alt="Post media" className="w-full h-full object-cover" />
-              </div>
-            )}
-
-            <div className="flex items-center justify-between pt-2 border-t border-zinc-100 dark:border-zinc-800 text-xs text-zinc-600 dark:text-zinc-400">
-              <button 
-                onClick={() => handleLike(post.id)}
-                className={`flex items-center gap-1.5 font-bold px-3 py-1.5 rounded-xl transition ${post.isLiked ? 'text-red-600 bg-red-50 dark:bg-red-950/30' : 'hover:bg-zinc-100 dark:hover:bg-zinc-800'}`}
-              >
-                <Heart className={`w-4 h-4 ${post.isLiked ? 'fill-red-600' : ''}`} /> {post.likes} लाइक्स
-              </button>
-
-              <button className="flex items-center gap-1.5 font-bold px-3 py-1.5 rounded-xl hover:bg-zinc-100 dark:hover:bg-zinc-800">
-                <MessageCircle className="w-4 h-4" /> {post.comments.length} कमेंट्स
-              </button>
-
-              <button 
-                onClick={() => alert('पोस्ट लिंक शेयर के लिए कॉपी कर लिया गया है!')}
-                className="flex items-center gap-1.5 font-bold px-3 py-1.5 rounded-xl hover:bg-zinc-100 dark:hover:bg-zinc-800 text-blue-600"
-              >
-                <Share2 className="w-4 h-4" /> शेयर
-              </button>
-            </div>
-
-            <div className="space-y-2 pt-2">
-              {post.comments.map(c => (
-                <div key={c.id} className="bg-zinc-50 dark:bg-zinc-800/50 p-2.5 rounded-2xl text-xs">
-                  <span className="font-bold text-zinc-900 dark:text-zinc-100 mr-2">{c.user}:</span>
-                  <span className="text-zinc-600 dark:text-zinc-300">{c.text}</span>
-                </div>
-              ))}
-
-              <form onSubmit={(e) => handleAddComment(post.id, e)} className="flex gap-2 pt-1">
-                <input 
-                  type="text" 
-                  placeholder="अपना कमेंट लिखें..." 
-                  value={post.newCommentText}
-                  onChange={(e) => {
-                    const val = e.target.value;
-                    setPosts(posts.map(p => p.id === post.id ? {...p, newCommentText: val} : p));
-                  }}
-                  className="flex-1 px-3 py-2 text-xs bg-zinc-50 dark:bg-zinc-800 border rounded-xl outline-none focus:ring-2 focus:ring-red-500"
-                />
-                <button type="submit" className="px-4 py-2 bg-red-600 text-white rounded-xl font-bold text-xs">
-                  भेजें
-                </button>
-              </form>
-            </div>
-
+        {posts.length === 0 ? (
+          <div className="bg-white dark:bg-zinc-900 border border-zinc-200 dark:border-zinc-800 rounded-3xl p-6 text-center text-xs text-zinc-400">
+            अभी तक कोई पोस्ट नहीं की गई है। ऊपर दिए गए बटन से नया सामान या पोस्ट जोड़ें!
           </div>
-        ))}
+        ) : (
+          posts.map((post: any) => (
+            <div key={post.id} className="bg-white dark:bg-zinc-900 border border-zinc-200 dark:border-zinc-800 rounded-3xl p-4 shadow-sm space-y-3">
+              
+              <div className="flex items-center gap-3">
+                {profile.avatar ? (
+                  <img src={profile.avatar} alt="Author" className="w-9 h-9 rounded-full object-cover border" />
+                ) : (
+                  <div className="w-9 h-9 rounded-full bg-zinc-200 flex items-center justify-center font-bold text-xs">{post.author[0]}</div>
+                )}
+                <div>
+                  <p className="text-xs font-bold text-zinc-900 dark:text-zinc-100">{post.author}</p>
+                  <p className="text-[10px] text-zinc-400">{post.time}</p>
+                </div>
+              </div>
+
+              <p className="text-xs text-zinc-700 dark:text-zinc-300 leading-relaxed">{post.content}</p>
+
+              {post.image && (
+                <div className="rounded-2xl overflow-hidden h-48 bg-zinc-100 dark:bg-zinc-800">
+                  <img src={post.image} alt="Post media" className="w-full h-full object-cover" />
+                </div>
+              )}
+
+              <div className="flex items-center justify-between pt-2 border-t border-zinc-100 dark:border-zinc-800 text-xs text-zinc-600 dark:text-zinc-400">
+                <button 
+                  onClick={() => handleLike(post.id)}
+                  className={`flex items-center gap-1.5 font-bold px-3 py-1.5 rounded-xl transition ${post.isLiked ? 'text-red-600 bg-red-50 dark:bg-red-950/30' : 'hover:bg-zinc-100 dark:hover:bg-zinc-800'}`}
+                >
+                  <Heart className={`w-4 h-4 ${post.isLiked ? 'fill-red-600' : ''}`} /> {post.likes} लाइक्स
+                </button>
+
+                <button className="flex items-center gap-1.5 font-bold px-3 py-1.5 rounded-xl hover:bg-zinc-100 dark:hover:bg-zinc-800">
+                  <MessageCircle className="w-4 h-4" /> {post.comments.length} कमेंट्स
+                </button>
+
+                <button 
+                  onClick={() => alert('पोस्ट लिंक शेयर के लिए कॉपी कर लिया गया है!')}
+                  className="flex items-center gap-1.5 font-bold px-3 py-1.5 rounded-xl hover:bg-zinc-100 dark:hover:bg-zinc-800 text-blue-600"
+                >
+                  <Share2 className="w-4 h-4" /> शेयर
+                </button>
+              </div>
+
+              <div className="space-y-2 pt-2">
+                {post.comments.map((c: any) => (
+                  <div key={c.id} className="bg-zinc-50 dark:bg-zinc-800/50 p-2.5 rounded-2xl text-xs">
+                    <span className="font-bold text-zinc-900 dark:text-zinc-100 mr-2">{c.user}:</span>
+                    <span className="text-zinc-600 dark:text-zinc-300">{c.text}</span>
+                  </div>
+                ))}
+
+                <form onSubmit={(e) => handleAddComment(post.id, e)} className="flex gap-2 pt-1">
+                  <input 
+                    type="text" 
+                    placeholder="अपना कमेंट लिखें..." 
+                    value={post.newCommentText || ''}
+                    onChange={(e) => {
+                      const val = e.target.value;
+                      setPosts(posts.map((p: any) => p.id === post.id ? {...p, newCommentText: val} : p));
+                    }}
+                    className="flex-1 px-3 py-2 text-xs bg-zinc-50 dark:bg-zinc-800 border rounded-xl outline-none focus:ring-2 focus:ring-red-500"
+                  />
+                  <button type="submit" className="px-4 py-2 bg-red-600 text-white rounded-xl font-bold text-xs">
+                    भेजें
+                  </button>
+                </form>
+              </div>
+
+            </div>
+          ))
+        )}
       </div>
 
       {/* सामान और पोस्ट जोड़ने का मॉडल पॉपअप */}
@@ -549,7 +566,7 @@ export default function Profile() {
                 />
               </div>
 
-              {/* गैलरी से फोटो चुनने का ऑप्शन */}
+              {/* गैलरी से असली फोटो चुनने का ऑप्शन */}
               <div>
                 <label className="text-[10px] text-zinc-400 font-bold">गैलरी से फोटो चुनें</label>
                 <input 
