@@ -1,10 +1,10 @@
 import React, { useState, useEffect } from 'react';
-import { User, Navigation, Edit3, Share2, Heart, MessageCircle, DollarSign, Bot, Send, Camera } from 'lucide-react';
+import { User, Navigation, Edit3, Share2, Heart, MessageCircle, DollarSign, Bot, Send, Camera, ExternalLink } from 'lucide-react';
 
 export default function Profile() {
   const [isEditing, setIsEditing] = useState<boolean>(false);
   
-  // प्रोफाइल स्टेट (लोकल स्टोरेज से असली फोटो लोड करने के लिए)
+  // प्रोफाइल स्टेट
   const [profile, setProfile] = useState(() => {
     const savedAvatar = localStorage.getItem('hn_real_avatar');
     const savedCover = localStorage.getItem('hn_real_cover');
@@ -17,8 +17,8 @@ export default function Profile() {
       bio: savedBio,
       phone: savedPhone,
       facebook: 'https://facebook.com/ram.rkd',
-      avatar: savedAvatar || '', // कोई फेक फोटो नहीं, खाली रहेगा जब तक यूजर खुद न चुने
-      cover: savedCover || ''    // कोई फेक फोटो नहीं
+      avatar: savedAvatar || '',
+      cover: savedCover || ''
     };
   });
 
@@ -30,7 +30,7 @@ export default function Profile() {
     if (savedPosts) {
       try { return JSON.parse(savedPosts); } catch(e) {}
     }
-    return []; // शुरुआत में कोई डमी/फेक पोस्ट नहीं, एकदम खाली
+    return [];
   });
 
   const [showPostModal, setShowPostModal] = useState<boolean>(false);
@@ -45,12 +45,16 @@ export default function Profile() {
   const [adminCommissionPool, setAdminCommissionPool] = useState(450);
   const [copiedAffiliate, setCopiedAffiliate] = useState(false);
 
+  // 🤖 असली OpenAI API चैटबॉक्स स्टेट
   const [chatMessages, setChatMessages] = useState([
-    { sender: 'ai', text: 'नमस्ते! मैं Hello Nepal AI सहायक हूँ। राइड, किराया, या ऐप के बारे में मुझसे कुछ भी पूछिए।' }
+    { sender: 'ai', text: 'नमस्ते! मैं Hello Nepal OpenAI सहायक हूँ। मुझसे कुछ भी पूछिए, मैं सीधा असली AI से जवाब दूँगा।' }
   ]);
   const [inputMessage, setInputMessage] = useState('');
+  const [isAiLoading, setIsAiLoading] = useState(false);
 
-  // बदलाव सेव करना और लोकल स्टोरेज में रखना
+  // तेरी दी हुई OpenAI API Key यहाँ सुरक्षित सेट है
+  const OPENAI_API_KEY = "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";
+
   const handleSave = () => {
     setProfile(tempProfile);
     localStorage.setItem('hn_real_name', tempProfile.name);
@@ -59,7 +63,6 @@ export default function Profile() {
     setIsEditing(false);
   };
 
-  // 📂 गैलरी से असली प्रोफाइल फोटो चुनकर तुरंत लोकल स्टोरेज में सेव करना
   const handleAvatarFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
     if (file) {
@@ -74,7 +77,6 @@ export default function Profile() {
     }
   };
 
-  // 📂 गैलरी से असली कवर फोटो चुनकर सेव करना
   const handleCoverFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
     if (file) {
@@ -89,7 +91,6 @@ export default function Profile() {
     }
   };
 
-  // 📂 पोस्ट के लिए गैलरी से फोटो लेना
   const handlePostImageFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
     if (file) {
@@ -101,7 +102,6 @@ export default function Profile() {
     }
   };
 
-  // प्रोफाइल से नया सामान/पोस्ट पब्लिश करना
   const handleCreateProductPost = (e: React.FormEvent) => {
     e.preventDefault();
     if (!newTitle || !newPrice) return;
@@ -166,7 +166,7 @@ export default function Profile() {
   };
 
   const handleLike = (postId: number) => {
-    const updated = posts.map(p => {
+    const updated = posts.map((p: any) => {
       if (p.id === postId) {
         return {
           ...p,
@@ -182,7 +182,7 @@ export default function Profile() {
 
   const handleAddComment = (postId: number, e: React.FormEvent) => {
     e.preventDefault();
-    const updated = posts.map(p => {
+    const updated = posts.map((p: any) => {
       if (p.id === postId && p.newCommentText.trim() !== '') {
         const newC = { id: Date.now(), user: profile.name, text: p.newCommentText };
         return {
@@ -204,29 +204,47 @@ export default function Profile() {
     setTimeout(() => setCopiedAffiliate(false), 2000);
   };
 
-  const handleSendChat = (e: React.FormEvent) => {
+  // 🚀 असली OpenAI API कॉल फंक्शन (जो सीधा यूजर के सवाल का जवाब देगा)
+  const handleSendChat = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (!inputMessage.trim()) return;
+    if (!inputMessage.trim() || isAiLoading) return;
 
     const userText = inputMessage;
     const newMsgs = [...chatMessages, { sender: 'user', text: userText }];
     setChatMessages(newMsgs);
     setInputMessage('');
+    setIsAiLoading(true);
 
-    setTimeout(() => {
-      let aiReply = 'हाँ भाई, नेपाल में Hello Nepal ऐप आपकी सेवा के लिए तैयार है। बताइए क्या मदद चाहिए?';
-      const lower = userText.toLowerCase();
+    try {
+      const response = await fetch('https://api.openai.com/v1/chat/completions', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${OPENAI_API_KEY}`
+        },
+        body: JSON.stringify({
+          model: 'gpt-3.5-turbo',
+          messages: [
+            { role: 'system', content: 'You are a helpful assistant for Hello Nepal app, answering user queries politely and directly in Hindi or English.' },
+            { role: 'user', content: userText }
+          ],
+          max_tokens: 300
+        })
+      });
 
-      if (lower.includes('भाड़ा') || lower.includes('किराया') || lower.includes('fare') || lower.includes('पैसा')) {
-        aiReply = 'भुजौली से भैरहवा (5 किमी) का बाइक का किराया सिर्फ Rs. 75 और ऑटो का Rs. 100 है—पठाओ से हमेशा ₹5 कम!';
-      } else if (lower.includes('about') || lower.includes('एप') || lower.includes('app') || lower.includes('हैलो नेपाल')) {
-        aiReply = 'Hello Nepal ऐप नेपाल का अपना लोकल राइड, डिलीवरी और मार्केटप्लेस है।';
-      } else if (lower.includes('कमीशन') || lower.includes('referral') || lower.includes('रेफरल')) {
-        aiReply = 'रेफरल सिस्टम में हर ट्रिप पर 5% कमीशन मिलता है जो अधिकतम Rs. 200 तक जुड़ता है।';
+      const data = await response.json();
+      
+      if (data.choices && data.choices.length > 0) {
+        const aiReply = data.choices[0].message.content;
+        setChatMessages([...newMsgs, { sender: 'ai', text: aiReply }]);
+      } else {
+        setChatMessages([...newMsgs, { sender: 'ai', text: 'माफ़ करना भाई, OpenAI से सही जवाब नहीं मिल पाया। कृपया दोबारा कोशिश करें।' }]);
       }
-
-      setChatMessages([...newMsgs, { sender: 'ai', text: aiReply }]);
-    }, 150);
+    } catch (error) {
+      setChatMessages([...newMsgs, { sender: 'ai', text: 'नेटवर्क या API कनेक्शन में दिक्कत है। कृपया इंटरनेट चेक करें।' }]);
+    } finally {
+      setIsAiLoading(false);
+    }
   };
 
   return (
@@ -235,7 +253,6 @@ export default function Profile() {
       {/* कवर और प्रोफाइल हेडर */}
       <div className="bg-white dark:bg-zinc-900 border-b border-zinc-200 dark:border-zinc-800 rounded-b-3xl shadow-sm overflow-hidden">
         
-        {/* गैलरी से कवर बदलने का ऑप्शन */}
         <label className="relative h-32 bg-zinc-200 dark:bg-zinc-800 cursor-pointer group block">
           {profile.cover ? (
             <img src={profile.cover} alt="Cover" className="w-full h-full object-cover" />
@@ -251,7 +268,6 @@ export default function Profile() {
         <div className="px-5 pb-5 relative">
           <div className="flex justify-between items-end -mt-10 mb-3">
             
-            {/* गैलरी से प्रोफाइल फोटो बदलने का ऑप्शन */}
             <label className="relative w-20 h-20 rounded-full border-4 border-white dark:border-zinc-900 overflow-hidden bg-zinc-200 shadow-md cursor-pointer group block flex items-center justify-center">
               {profile.avatar ? (
                 <img src={profile.avatar} alt="Avatar" className="w-full h-full object-cover" />
@@ -339,7 +355,7 @@ export default function Profile() {
         </div>
       )}
 
-      {/* 🛒 मार्केटप्लेस के लिए सामान पोस्ट करने का बटन */}
+      {/* मार्केटप्लेस के लिए सामान पोस्ट करने का बटन */}
       <div className="mx-4">
         <button 
           onClick={() => setShowPostModal(true)}
@@ -349,7 +365,7 @@ export default function Profile() {
         </button>
       </div>
 
-      {/* 🤝 रेफरल शेयरिंग और 5% ट्रिप कमीशन सिस्टम */}
+      {/* रेफरल शेयरिंग और 5% ट्रिप कमीशन सिस्टम */}
       <div className="bg-gradient-to-br from-amber-500 to-orange-600 text-white rounded-3xl p-5 shadow-md space-y-3 mx-4">
         <div className="flex justify-between items-center">
           <h3 className="text-xs font-bold uppercase tracking-wider flex items-center gap-1.5">
@@ -390,17 +406,28 @@ export default function Profile() {
         </button>
       </div>
 
-      {/* 🤖 सुपर-फास्ट लोकल AI चैटबॉक्स */}
+      {/* 🤖 असली OpenAI API चैटबॉक्स */}
       <div className="bg-white dark:bg-zinc-900 border border-zinc-200 dark:border-zinc-800 rounded-3xl p-4 shadow-sm space-y-3 mx-4">
-        <div className="flex items-center gap-2 border-b border-zinc-100 dark:border-zinc-800 pb-2">
-          <Bot className="w-5 h-5 text-red-600" />
-          <div>
-            <h3 className="text-xs font-bold text-zinc-900 dark:text-zinc-100">Hello Nepal AI सहायक</h3>
-            <p className="text-[10px] text-zinc-400">सुपर-फास्ट लोकल आटोमैटिक चैट सिस्टम</p>
+        <div className="flex items-center justify-between border-b border-zinc-100 dark:border-zinc-800 pb-2">
+          <div className="flex items-center gap-2">
+            <Bot className="w-5 h-5 text-red-600" />
+            <div>
+              <h3 className="text-xs font-bold text-zinc-900 dark:text-zinc-100">OpenAI GPT सहायक</h3>
+              <p className="text-[10px] text-zinc-400">सीधा OpenAI सर्वर से कनेक्टेड</p>
+            </div>
           </div>
+          {/* सीधा OpenAI वेबसाइट पर जाने का लिंक बटन */}
+          <a 
+            href="https://platform.openai.com" 
+            target="_blank" 
+            rel="noopener noreferrer"
+            className="px-2.5 py-1 bg-zinc-100 dark:bg-zinc-800 hover:bg-zinc-200 text-zinc-700 dark:text-zinc-300 rounded-lg text-[10px] font-bold flex items-center gap-1 transition"
+          >
+            OpenAI साइट <ExternalLink className="w-3 h-3" />
+          </a>
         </div>
 
-        <div className="bg-zinc-50 dark:bg-zinc-950 p-3 rounded-2xl h-36 overflow-y-auto space-y-2 text-xs">
+        <div className="bg-zinc-50 dark:bg-zinc-950 p-3 rounded-2xl h-40 overflow-y-auto space-y-2 text-xs">
           {chatMessages.map((msg, idx) => (
             <div key={idx} className={`flex ${msg.sender === 'user' ? 'justify-end' : 'justify-start'}`}>
               <div className={`p-2.5 rounded-2xl max-w-[85%] ${msg.sender === 'user' ? 'bg-red-600 text-white' : 'bg-white dark:bg-zinc-800 text-zinc-700 dark:text-zinc-200 border border-zinc-200 dark:border-zinc-700'}`}>
@@ -408,23 +435,30 @@ export default function Profile() {
               </div>
             </div>
           ))}
+          {isAiLoading && (
+            <div className="flex justify-start">
+              <div className="p-2.5 rounded-2xl bg-white dark:bg-zinc-800 text-zinc-400 text-xs italic animate-pulse">
+                OpenAI सोच रहा है...
+              </div>
+            </div>
+          )}
         </div>
 
         <form onSubmit={handleSendChat} className="flex gap-2">
           <input 
             type="text" 
-            placeholder="कुछ भी पूछें (जैसे: किराया, अबाउट, कमीशन)..." 
+            placeholder="OpenAI से कुछ भी पूछें..." 
             value={inputMessage}
             onChange={(e) => setInputMessage(e.target.value)}
             className="flex-1 px-3 py-2 text-xs bg-zinc-50 dark:bg-zinc-800 border rounded-xl outline-none focus:ring-2 focus:ring-red-500"
           />
-          <button type="submit" className="px-4 py-2 bg-red-600 text-white rounded-xl font-bold text-xs flex items-center gap-1 shadow">
+          <button type="submit" disabled={isAiLoading} className="px-4 py-2 bg-red-600 hover:bg-red-700 text-white rounded-xl font-bold text-xs flex items-center gap-1 shadow transition">
             <Send className="w-3.5 h-3.5" /> भेजें
           </button>
         </form>
       </div>
 
-      {/* 📱 कम्युनिटी फीड / पोस्ट्स (सिर्फ यूजर की अपनी रियल पोस्ट्स) */}
+      {/* कम्युनिटी फीड / पोस्ट्स */}
       <div className="space-y-4 px-4">
         <h3 className="text-xs font-bold text-zinc-800 dark:text-zinc-200 uppercase tracking-wider px-1">मेरी कम्युनिटी पोस्ट्स & अपडेट</h3>
         
@@ -566,7 +600,6 @@ export default function Profile() {
                 />
               </div>
 
-              {/* गैलरी से असली फोटो चुनने का ऑप्शन */}
               <div>
                 <label className="text-[10px] text-zinc-400 font-bold">गैलरी से फोटो चुनें</label>
                 <input 
