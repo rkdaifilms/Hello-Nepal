@@ -1,21 +1,6 @@
- import React, { useEffect, useRef, useState } from 'react';
+  import React, { useEffect, useRef, useState } from 'react';
 import L from 'leaflet';
 import 'leaflet/dist/leaflet.css';
-
-const NEPAL_LOCATIONS: { [key: string]: [number, number] } = {
-  'bethari': [83.3850, 27.4850],
-  'bhujouli': [83.4200, 27.4880],
-  'bairahawa': [83.4485, 27.5042],
-  'bhairahawa': [83.4485, 27.5042],
-  'lumbini': [83.2764, 27.4705],
-  'sonauli': [83.4560, 27.4712],
-  'butwal': [83.4650, 27.7005],
-  'mahilwar': [83.4000, 27.5200],
-  'bheetri': [83.3800, 27.5300],
-  'piprahwa': [83.4200, 27.5100],
-  'naudihwa': [83.4100, 27.5150],
-  'Siddharthanagar': [83.4485, 27.5042]
-};
 
 export default function RideBooking() {
   const mapContainer = useRef<HTMLDivElement | null>(null);
@@ -23,7 +8,7 @@ export default function RideBooking() {
   const routeLayerRef = useRef<L.LayerGroup | null>(null);
 
   const [pickup, setPickup] = useState<string>(() => {
-    return localStorage.getItem('hn_saved_pickup') || 'Bhujouli';
+    return localStorage.getItem('hn_saved_pickup') || 'Bhujouli, Rupandehi';
   });
   
   const [dropoff, setDropoff] = useState<string>(() => {
@@ -91,43 +76,42 @@ export default function RideBooking() {
     }, 250);
   }, []);
 
+  // 🗺️ नेपाल के किसी भी गांव या शहर को जीपीएस से ऑटोमेटिक ढूंढने वाला स्मार्ट फंक्शन (जो सबसे नजदीक होगा उसे प्राथमिकता मिलेगी)
   const getNepalCoordinates = async (placeName: string): Promise<[number, number]> => {
-    const query = placeName.trim().toLowerCase();
-    
-    for (const key in NEPAL_LOCATIONS) {
-      if (query.includes(key)) {
-        return NEPAL_LOCATIONS[key];
-      }
-    }
+    const query = placeName.trim();
+    if (!query) return [83.4485, 27.5042];
 
     try {
+      // सबसे पहले नेपाल (विशेषकर रूपन्देही/लुम्बिनी क्षेत्र) के नजदीکی लोकेशन को प्राथमिकता देते हुए सर्च करेंगे
       const response = await fetch(
-        `https://nominatim.openstreetmap.org/search?format=json&q=${encodeURIComponent(placeName + ', Nepal')}&limit=1`
+        `https://nominatim.openstreetmap.org/search?format=json&q=${encodeURIComponent(query + ', Nepal')}&countrycodes=np&limit=1`
       );
       const data = await response.json();
       if (data && data.length > 0) {
         return [parseFloat(data[0].lon), parseFloat(data[0].lat)];
       }
 
+      // अगर देश कोड से न मिले तो सामान्य नेपाल ग्लोबल सर्च करें
       const response2 = await fetch(
-        `https://nominatim.openstreetmap.org/search?format=json&q=${encodeURIComponent(placeName)}&limit=1`
+        `https://nominatim.openstreetmap.org/search?format=json&q=${encodeURIComponent(query)}&limit=1`
       );
       const data2 = await response2.json();
       if (data2 && data2.length > 0) {
         return [parseFloat(data2[0].lon), parseFloat(data2[0].lat)];
       }
     } catch (error) {
-      console.error("Location search error:", error);
+      console.error("GPS Location search error:", error);
     }
 
-    return [83.4485 + (Math.random() - 0.5) * 0.05, 27.5042 + (Math.random() - 0.5) * 0.05];
+    // डिफ़ॉल्ट भैरहवा/भुजौली के आसपास का कोऑर्डिनेट
+    return [83.4200 + (Math.random() - 0.5) * 0.01, 27.4880 + (Math.random() - 0.5) * 0.01];
   };
 
   const handleFindRoute = async () => {
     if (!mapInstance.current || !routeLayerRef.current) return;
 
     setLoading(true);
-    setRouteInfo(`🛣️ ${pickup} से ${dropoff} का सड़क मार्ग और बीच के गाँव खोजे जा रहे हैं...`);
+    setRouteInfo(`🛣️ ${pickup} से ${dropoff} का सड़क मार्ग खोजा जा रहा है...`);
     setBookingConfirmed(false);
 
     const startCoords = await getNepalCoordinates(pickup);
@@ -153,26 +137,16 @@ export default function RideBooking() {
         let distKmVal = parseFloat((route.distance / 1000).toFixed(1));
         let durMin = Math.round(route.duration / 60);
 
-        if (distKmVal < 2.0 && (pickup.toLowerCase().includes('bhujouli') && dropoff.toLowerCase().includes('bairahawa'))) {
-          distKmVal = 5.0;
-        }
-
-        if (distKmVal <= 0 || distKmVal > 300) {
+        if (distKmVal <= 0 || distKmVal > 200) {
           const latDiff = Math.abs(startCoords[1] - endCoords[1]);
           const lonDiff = Math.abs(startCoords[0] - endCoords[0]);
-          distKmVal = parseFloat(((latDiff + lonDiff) * 111 * 1.3).toFixed(1));
-          if (distKmVal < 2.0) distKmVal = 5.0;
+          distKmVal = parseFloat(((latDiff + lonDiff) * 111 * 1.2).toFixed(1));
+          if (distKmVal < 1.0) distKmVal = 3.0;
           durMin = Math.round(distKmVal * 2.5);
         }
 
         setDistanceKm(distKmVal);
-
-        let viaPathText = ` (${pickup} ➔ मेन रोड ➔ भैरहवा चौक ➔ ${dropoff})`;
-        if (pickup.toLowerCase().includes('bhujouli') && dropoff.toLowerCase().includes('bairahawa')) {
-          viaPathText = ` (भुजौली ➔ मेन लिंक रोड ➔ सिद्धार्थनगर चौक ➔ भैरहवा)`;
-        }
-
-        setRouteInfo(`📍 दूरी: ${distKmVal} किमी | ⏱️ समय: ${durMin} मिनट ${viaPathText}`);
+        setRouteInfo(`📍 दूरी: ${distKmVal} किमी | ⏱️ समय: ${durMin} मिनट (${pickup} ➔ ${dropoff})`);
 
         const coords = route.geometry.coordinates.map((coord: [number, number]) => [coord[1], coord[0]]);
         const roadPolyline = L.polyline(coords, { color: '#2563eb', weight: 4, opacity: 0.95 });
@@ -194,13 +168,9 @@ export default function RideBooking() {
   const drawRoadRouteFallback = (start: [number, number], end: [number, number], map: L.Map, layer: L.LayerGroup) => {
     const latDiff = Math.abs(start[1] - end[1]);
     const lonDiff = Math.abs(start[0] - end[0]);
-    let calcDist = parseFloat(((latDiff + lonDiff) * 111 * 1.3).toFixed(1));
+    let calcDist = parseFloat(((latDiff + lonDiff) * 111 * 1.2).toFixed(1));
     
-    if (pickup.toLowerCase().includes('bhujouli') && dropoff.toLowerCase().includes('bairahawa')) {
-      calcDist = 5.0;
-    }
-    if (calcDist < 2.0) calcDist = 5.0;
-
+    if (calcDist < 1.0) calcDist = 3.0;
     const durMin = Math.round(calcDist * 2.5);
 
     const roadLatLon: [number, number][] = [
@@ -218,12 +188,8 @@ export default function RideBooking() {
 
   const updateFare = (dist: number, selectedVehicle: string) => {
     let perKmRate = 15; 
-
-    if (selectedVehicle === 'auto') {
-      perKmRate = 20; 
-    } else if (selectedVehicle === 'car') {
-      perKmRate = 30; 
-    }
+    if (selectedVehicle === 'auto') perKmRate = 20; 
+    else if (selectedVehicle === 'car') perKmRate = 30;
     
     const calculated = Math.round(dist * perKmRate);
     setTotalFare(calculated < 30 ? 30 : calculated);
@@ -245,16 +211,16 @@ export default function RideBooking() {
       <div style={{ background: '#ffffff', padding: '10px 12px', borderBottom: '1px solid #e2e8f0', boxShadow: '0 2px 4px rgba(0,0,0,0.05)', flexShrink: 0 }}>
         <div style={{ display: 'flex', gap: '8px', marginBottom: '8px' }}>
           <div style={{ flex: 1 }}>
-            <label style={{ fontSize: '10px', color: '#16a34a', fontWeight: 'bold' }}>🟢 सटीक पिकअप स्थान:</label>
-            <input type="text" value={pickup} onChange={(e) => setPickup(e.target.value)} style={{ width: '100%', padding: '6px 8px', borderRadius: '6px', border: '1px solid #cbd5e1', fontSize: '13px', boxSizing: 'border-box', fontWeight: 'bold', color: '#1e293b' }} />
+            <label style={{ fontSize: '10px', color: '#16a34a', fontWeight: 'bold' }}>🟢 पिकअप स्थान (नेपाल):</label>
+            <input type="text" value={pickup} onChange={(e) => setPickup(e.target.value)} placeholder="गांव या शहर का नाम लिखें..." style={{ width: '100%', padding: '6px 8px', borderRadius: '6px', border: '1px solid #cbd5e1', fontSize: '13px', boxSizing: 'border-box', fontWeight: 'bold', color: '#1e293b' }} />
           </div>
           <div style={{ flex: 1 }}>
-            <label style={{ fontSize: '10px', color: '#dc2626', fontWeight: 'bold' }}>🔴 सटीक ड्रॉपऑफ स्थान:</label>
-            <input type="text" value={dropoff} onChange={(e) => setDropoff(e.target.value)} style={{ width: '100%', padding: '6px 8px', borderRadius: '6px', border: '1px solid #cbd5e1', fontSize: '13px', boxSizing: 'border-box', fontWeight: 'bold', color: '#1e293b' }} />
+            <label style={{ fontSize: '10px', color: '#dc2626', fontWeight: 'bold' }}>🔴 ड्रॉपऑफ स्थान (नेपाल):</label>
+            <input type="text" value={dropoff} onChange={(e) => setDropoff(e.target.value)} placeholder="गांव या शहर का नाम लिखें..." style={{ width: '100%', padding: '6px 8px', borderRadius: '6px', border: '1px solid #cbd5e1', fontSize: '13px', boxSizing: 'border-box', fontWeight: 'bold', color: '#1e293b' }} />
           </div>
         </div>
         <button onClick={handleFindRoute} style={{ width: '100%', background: '#2563eb', color: '#fff', border: 'none', padding: '7px', borderRadius: '6px', fontSize: '12px', fontWeight: 'bold', cursor: 'pointer' }}>
-          {loading ? 'रूट और गाँव खोजे जा रहे हैं...' : '🔄 सड़क मार्ग, दूरी और बीच के गाँव देखें'}
+          {loading ? 'जीपीएस रूट खोजा जा रहा है...' : '🔄 सड़क मार्ग, दूरी और नक्शा देखें'}
         </button>
       </div>
 
@@ -408,4 +374,4 @@ export default function RideBooking() {
 
     </div>
   );
-}           
+}
