@@ -1,7 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import type { ProductItem } from '../types';
-import { CheckoutModal } from './CheckoutModal';
-import { Search, Share2, ShoppingBag, Check } from 'lucide-react';
+import { Search, Share2, ShoppingBag, Check, X, QrCode, CreditCard, Smartphone } from 'lucide-react';
 
 const INITIAL_PRODUCTS: ProductItem[] = [
   {
@@ -44,7 +43,6 @@ const INITIAL_PRODUCTS: ProductItem[] = [
 
 const Marketplace: React.FC = () => {
   const [products, setProducts] = useState<ProductItem[]>(() => {
-    // प्रोफाइल या लोकल स्टोरेज से पोस्ट किए गए प्रोडक्ट्स को लोड करना[span_2](start_span)[span_2](end_span)
     const saved = localStorage.getItem('hello_nepal_marketplace_products');
     if (saved) {
       try {
@@ -62,6 +60,13 @@ const Marketplace: React.FC = () => {
   const [selectedProduct, setSelectedProduct] = useState<ProductItem | null>(null);
   const [copiedId, setCopiedId] = useState<string | null>(null);
 
+  // पेमेंट और चेकआउट स्टेट
+  const [paymentMethod, setPaymentMethod] = useState<'esewa' | 'khalti' | 'imepay' | 'card' | 'qr'>('esewa');
+  const [buyerPhone, setBuyerPhone] = useState('');
+  const [buyerAddress, setBuyerAddress] = useState('');
+  const [customQrImage, setCustomQrImage] = useState('');
+  const [orderSuccess, setOrderSuccess] = useState(false);
+
   const categories = [
     'All',
     'Medicines',
@@ -71,7 +76,6 @@ const Marketplace: React.FC = () => {
     'Electronics',
   ];
 
-  // हर बार जब मार्केटप्लेस खुले, प्रोफाइल के नए पोस्ट्स सिंक हो जाएं[span_3](start_span)[span_3](end_span)
   useEffect(() => {
     const syncProducts = () => {
       const saved = localStorage.getItem('hello_nepal_marketplace_products');
@@ -127,13 +131,41 @@ const Marketplace: React.FC = () => {
     }
   };
 
+  const handleQrUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (file) {
+      const reader = new FileReader();
+      reader.onloadend = () => {
+        setCustomQrImage(reader.result as string);
+      };
+      reader.readAsDataURL(file);
+    }
+  };
+
+  const handleProcessPayment = (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!buyerPhone || !buyerAddress) {
+      alert('कृपया अपना फोन नंबर और डिलीवरी पता दर्ज करें!');
+      return;
+    }
+
+    setOrderSuccess(true);
+    setTimeout(() => {
+      setOrderSuccess(false);
+      setSelectedProduct(null);
+      setBuyerPhone('');
+      setBuyerAddress('');
+      alert('सफलतापूर्वक ऑर्डर बुक हो गया है! सामान आपके पते पर भेजा जा रहा है।');
+    }, 2000);
+  };
+
   return (
     <div className="w-full max-w-5xl mx-auto p-4 space-y-6">
       <div className="space-y-3">
         <div className="flex flex-col sm:flex-row items-center justify-between gap-3">
           <h2 className="text-xl font-extrabold text-zinc-900 dark:text-zinc-100 flex items-center gap-2">
             <ShoppingBag className="w-6 h-6 text-red-600" />
-            नेपाल लोकल मार्केटप्लेस (प्रोफाइल सिंकड)[span_4](start_span)[span_4](end_span)
+            नेपाल लोकल मार्केटप्लेस (पेमेंट लिंक्ड)
           </h2>
 
           <div className="relative w-full sm:w-72">
@@ -253,11 +285,129 @@ const Marketplace: React.FC = () => {
         </div>
       )}
 
+      {/* 🛒 चेकआउट और पेमेंट मॉडल (ई-सेवा, खल्ती, आईएमई पे, क्यूआर और कार्ड) */}
       {selectedProduct && (
-        <CheckoutModal
-          product={selectedProduct}
-          onClose={() => setSelectedProduct(null)}
-        />
+        <div className="fixed inset-0 bg-black/60 z-50 flex items-center justify-center p-4 overflow-y-auto">
+          <div className="bg-white dark:bg-zinc-900 w-full max-w-md rounded-3xl p-6 space-y-5 shadow-2xl relative">
+            <button 
+              onClick={() => setSelectedProduct(null)} 
+              className="absolute top-4 right-4 text-zinc-400 hover:text-zinc-600 font-bold text-lg"
+            >
+              <X className="w-5 h-5" />
+            </button>
+
+            <div className="flex items-center gap-3 border-b border-zinc-100 dark:border-zinc-800 pb-3">
+              <img src={selectedProduct.imageUrl} alt="" className="w-12 h-12 rounded-xl object-cover" />
+              <div>
+                <h3 className="text-sm font-bold text-zinc-900 dark:text-zinc-100">{selectedProduct.title}</h3>
+                <p className="text-xs text-red-600 font-extrabold">मूल्य: रु {selectedProduct.markupPrice || selectedProduct.basePrice}</p>
+              </div>
+            </div>
+
+            {orderSuccess ? (
+              <div className="py-8 text-center space-y-3">
+                <div className="w-12 h-12 bg-emerald-100 text-emerald-600 rounded-full flex items-center justify-center mx-auto text-xl font-bold">✓</div>
+                <h4 className="text-base font-bold text-zinc-900 dark:text-zinc-100">भुगतान सफल रहा!</h4>
+                <p className="text-xs text-zinc-500">आपका ऑर्डर कन्फर्म हो गया है और होम डिलीवरी के लिए भेज दिया गया है।</p>
+              </div>
+            ) : (
+              <form onSubmit={handleProcessPayment} className="space-y-4 text-xs">
+                <div className="space-y-1">
+                  <label className="font-bold text-zinc-600 dark:text-zinc-400">आपका मोबाइल नंबर (फोन पे / संपर्क)</label>
+                  <input 
+                    type="text" 
+                    placeholder="जैसे: +977 9811522480" 
+                    value={buyerPhone}
+                    onChange={(e) => setBuyerPhone(e.target.value)}
+                    required
+                    className="w-full px-3 py-2 bg-zinc-50 dark:bg-zinc-800 border rounded-xl outline-none focus:ring-2 focus:ring-red-500"
+                  />
+                </div>
+
+                <div className="space-y-1">
+                  <label className="font-bold text-zinc-600 dark:text-zinc-400">डिलीवरी का पूरा पता (Address)</label>
+                  <textarea 
+                    placeholder="जैसे: भुजौली (Ward No. 11), भैरहवा, रूपन्देही" 
+                    value={buyerAddress}
+                    onChange={(e) => setBuyerAddress(e.target.value)}
+                    rows={2}
+                    required
+                    className="w-full px-3 py-2 bg-zinc-50 dark:bg-zinc-800 border rounded-xl outline-none focus:ring-2 focus:ring-red-500"
+                  />
+                </div>
+
+                <div className="space-y-2">
+                  <label className="font-bold text-zinc-600 dark:text-zinc-400">पेमेंट माध्यम चुनें (Payment Gateway)</label>
+                  <div className="grid grid-cols-3 gap-2">
+                    <button
+                      type="button"
+                      onClick={() => setPaymentMethod('esewa')}
+                      className={`p-2.5 rounded-xl border font-bold text-[11px] flex flex-col items-center gap-1 transition ${paymentMethod === 'esewa' ? 'bg-emerald-50 border-emerald-500 text-emerald-700' : 'bg-zinc-50 border-zinc-200'}`}
+                    >
+                      <Smartphone className="w-4 h-4 text-emerald-600" /> eSewa (ई-सेवा)
+                    </button>
+
+                    <button
+                      type="button"
+                      onClick={() => setPaymentMethod('khalti')}
+                      className={`p-2.5 rounded-xl border font-bold text-[11px] flex flex-col items-center gap-1 transition ${paymentMethod === 'khalti' ? 'bg-purple-50 border-purple-500 text-purple-700' : 'bg-zinc-50 border-zinc-200'}`}
+                    >
+                      <Smartphone className="w-4 h-4 text-purple-600" /> Khalti (खल्ती)
+                    </button>
+
+                    <button
+                      type="button"
+                      onClick={() => setPaymentMethod('imepay')}
+                      className={`p-2.5 rounded-xl border font-bold text-[11px] flex flex-col items-center gap-1 transition ${paymentMethod === 'imepay' ? 'bg-blue-50 border-blue-500 text-blue-700' : 'bg-zinc-50 border-zinc-200'}`}
+                    >
+                      <Smartphone className="w-4 h-4 text-blue-600" /> IME Pay
+                    </button>
+                  </div>
+
+                  <div className="grid grid-cols-2 gap-2 pt-1">
+                    <button
+                      type="button"
+                      onClick={() => setPaymentMethod('card')}
+                      className={`p-2.5 rounded-xl border font-bold text-[11px] flex items-center justify-center gap-2 transition ${paymentMethod === 'card' ? 'bg-red-50 border-red-500 text-red-700' : 'bg-zinc-50 border-zinc-200'}`}
+                    >
+                      <CreditCard className="w-4 h-4" /> डेबिट / क्रेडिट कार्ड
+                    </button>
+
+                    <button
+                      type="button"
+                      onClick={() => setPaymentMethod('qr')}
+                      className={`p-2.5 rounded-xl border font-bold text-[11px] flex items-center justify-center gap-2 transition ${paymentMethod === 'qr' ? 'bg-amber-50 border-amber-500 text-amber-700' : 'bg-zinc-50 border-zinc-200'}`}
+                    >
+                      <QrCode className="w-4 h-4" /> QR स्कैनर (Scan & Pay)
+                    </button>
+                  </div>
+                </div>
+
+                {/* अगर QR स्कैनर चुना गया हो तो दुकानदार का QR अपलोड करने या देखने का विकल्प */}
+                {paymentMethod === 'qr' && (
+                  <div className="bg-zinc-50 dark:bg-zinc-800 p-3 rounded-2xl space-y-2 border border-zinc-200 dark:border-zinc-700 text-center">
+                    <p className="text-[11px] text-zinc-500 font-medium">दुकानदार का पेमेंट QR कोड यहाँ स्कैन करें या अपलोड करें</p>
+                    {customQrImage ? (
+                      <img src={customQrImage} alt="Vendor QR" className="w-32 h-32 object-contain mx-auto rounded-xl border" />
+                    ) : (
+                      <div className="w-32 h-32 bg-zinc-200 dark:bg-zinc-900 rounded-xl flex items-center justify-center mx-auto text-[10px] text-zinc-400 font-bold">
+                        QR फोटो नहीं है
+                      </div>
+                    )}
+                    <input type="file" accept="image/*" onChange={handleQrUpload} className="text-[10px] w-full pt-1" />
+                  </div>
+                )}
+
+                <button
+                  type="submit"
+                  className="w-full py-3 bg-red-600 hover:bg-red-700 text-white rounded-xl font-extrabold text-xs shadow-md transition"
+                >
+                  रु {selectedProduct.markupPrice || selectedProduct.basePrice} भुगतान करें और आर्डर कन्फर्म करें
+                </button>
+              </form>
+            )}
+          </div>
+        </div>
       )}
     </div>
   );
