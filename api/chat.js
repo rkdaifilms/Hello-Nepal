@@ -1,11 +1,28 @@
 export default async function handler(req, res) {
+  // 🛡️ CORS हेडर्स ताकि ब्राउज़र से रिक्वेस्ट ब्लॉक न हो
+  res.setHeader('Access-Control-Allow-Credentials', true);
+  res.setHeader('Access-Control-Allow-Origin', '*');
+  res.setHeader('Access-Control-Allow-Methods', 'GET,OPTIONS,PATCH,DELETE,POST,PUT');
+  res.setHeader(
+    'Access-Control-Allow-Headers',
+    'X-CSRF-Token, X-Requested-With, Accept, Accept-Version, Content-Length, Content-MD5, Content-Type, Date, X-Api-Version'
+  );
+
+  if (req.method === 'OPTIONS') {
+    res.status(200).end();
+    return;
+  }
+
   if (req.method !== 'POST') {
     return res.status(405).json({ error: 'Method not allowed' });
   }
 
   const { message } = req.body;
+  if (!message) {
+    return res.status(400).json({ reply: 'भाई, कृपया कुछ लिखकर पूछें।' });
+  }
 
-  // 🔑 तेरी तीनों असली और पक्की API Keys यहाँ सेट कर दी गई हैं
+  // 🔑 तेरी तीनों असली API Keys यहाँ सुरक्षित हैं
   const GEMINI_API_KEY = "AQ.Ab8RN6IhziSgyS5G0EQRP7-Qya_FPtGZyJsj1p6ud5nFFJ9SZg";
   const OPENROUTER_API_KEY = "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";
   const OPENAI_API_KEY = "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";
@@ -23,7 +40,7 @@ export default async function handler(req, res) {
         })
       });
       const geminiData = await geminiRes.json();
-      if (geminiData.candidates && geminiData.candidates[0].content && geminiData.candidates[0].content.parts[0].text) {
+      if (geminiData.candidates && geminiData.candidates[0]?.content?.parts?.[0]?.text) {
         replyText = geminiData.candidates[0].content.parts[0].text;
       }
     } catch (err) {
@@ -48,7 +65,7 @@ export default async function handler(req, res) {
         })
       });
       const orData = await orRes.json();
-      if (orData.choices && orData.choices[0].message && orData.choices[0].message.content) {
+      if (orData.choices && orData.choices[0]?.message?.content) {
         replyText = orData.choices[0].message.content;
       }
     } catch (err) {
@@ -72,7 +89,7 @@ export default async function handler(req, res) {
         })
       });
       const openaiData = await openaiRes.json();
-      if (openaiData.choices && openaiData.choices[0].message && openaiData.choices[0].message.content) {
+      if (openaiData.choices && openaiData.choices[0]?.message?.content) {
         replyText = openaiData.choices[0].message.content;
       }
     } catch (err) {
@@ -83,6 +100,6 @@ export default async function handler(req, res) {
   if (replyText) {
     return res.status(200).json({ reply: replyText });
   } else {
-    return res.status(500).json({ reply: 'माफ़ करना भाई, तीनों एआई सर्वर में से अभी रिस्पॉन्स नहीं मिला।' });
+    return res.status(500).json({ reply: 'माफ़ करना भाई, तीनों एआई सर्वर में से अभी रिस्पॉन्स नहीं मिला। कृपया पुनः प्रयास करें।' });
   }
 }
