@@ -45,9 +45,9 @@ export default function Profile() {
   const [adminCommissionPool, setAdminCommissionPool] = useState(450);
   const [copiedAffiliate, setCopiedAffiliate] = useState(false);
 
-  // 🤖 100% वर्किंग AI चैटबॉक्स स्टेट
+  // 🤖 AI चैटबॉक्स स्टेट
   const [chatMessages, setChatMessages] = useState([
-    { sender: 'ai', text: 'नमस्ते रामकुमार भाई! मैं Hello Nepal AI सहायक हूँ। राइड, किराया, या ऐप के बारे में मुझसे कुछ भी पूछिए।' }
+    { sender: 'ai', text: 'नमस्ते रामकुमार भाई! मैं Hello Nepal AI सहायक हूँ। मुझसे कुछ भी पूछिए।' }
   ]);
   const [inputMessage, setInputMessage] = useState('');
   const [isAiLoading, setIsAiLoading] = useState(false);
@@ -201,8 +201,8 @@ export default function Profile() {
     setTimeout(() => setCopiedAffiliate(false), 2000);
   };
 
-  // 🚀 सुपर-फास्ट और स्मार्ट रिस्पॉन्स सिस्टम (जो बिना किसी नेटवर्क रुकावट के तुरंत जवाब देगा)
-  const handleSendChat = (e: React.FormEvent) => {
+  // 🚀 प्रॉक्सी सर्वर के जरिए AI चैट रिस्पॉन्स फंक्शन
+  const handleSendChat = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!inputMessage.trim() || isAiLoading) return;
 
@@ -212,25 +212,27 @@ export default function Profile() {
     setInputMessage('');
     setIsAiLoading(true);
 
-    setTimeout(() => {
-      let aiReply = 'हाँ भाई, नेपाल में Hello Nepal ऐप आपकी सेवा के लिए तैयार है। बताइए क्या मदद चाहिए?';
-      const lower = userText.toLowerCase();
+    try {
+      const response = await fetch('/api/chat', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({ message: userText })
+      });
 
-      if (lower.includes('भाड़ा') || lower.includes('किराया') || lower.includes('fare') || lower.includes('पैसा')) {
-        aiReply = 'भुजौली से भैरहवा (5 किमी) का बाइक का किराया सिर्फ Rs. 75 और ऑटो का Rs. 100 है—पठाओ से हमेशा ₹5 कम!';
-      } else if (lower.includes('about') || lower.includes('एप') || lower.includes('app') || lower.includes('हैलो नेपाल')) {
-        aiReply = 'Hello Nepal ऐप नेपाल का अपना लोकल राइड, डिलीवरी और मार्केटप्लेस है।';
-      } else if (lower.includes('कमीशन') || lower.includes('referral') || lower.includes('रेफरल')) {
-        aiReply = 'रेफरल सिस्टम में हर ट्रिप पर 5% कमीशन मिलता है जो अधिकतम Rs. 200 तक जुड़ता है।';
-      } else if (lower.includes('kaise ho') || lower.includes('hello') || lower.includes('hi') || lower.includes('भाइयों')) {
-        aiReply = 'मैं एकदम बढ़िया हूँ भाई रामकुमार! बताइए Hello Nepal ऐप में आज क्या मदद चाहिए?';
+      const data = await response.json();
+      
+      if (data.reply) {
+        setChatMessages([...newMsgs, { sender: 'ai', text: data.reply }]);
       } else {
-        aiReply = `"${userText}" के बारे में Hello Nepal सिस्टम पूरी तरह अपडेट है। आप राइड बुक कर सकते हैं या मार्केटप्लेस पर सामान देख सकते हैं!`;
+        setChatMessages([...newMsgs, { sender: 'ai', text: 'माफ़ करना भाई, सर्वर से जवाब नहीं मिल पाया।' }]);
       }
-
-      setChatMessages([...newMsgs, { sender: 'ai', text: aiReply }]);
+    } catch (error) {
+      setChatMessages([...newMsgs, { sender: 'ai', text: 'नेटवर्क कनेक्शन में दिक्कत है। कृपया इंटरनेट चेक करें।' }]);
+    } finally {
       setIsAiLoading(false);
-    }, 250);
+    }
   };
 
   return (
@@ -392,14 +394,14 @@ export default function Profile() {
         </button>
       </div>
 
-      {/* 🤖 100% वर्किंग AI चैटबॉक्स */}
+      {/* 🤖 AI चैटबॉक्स */}
       <div className="bg-white dark:bg-zinc-900 border border-zinc-200 dark:border-zinc-800 rounded-3xl p-4 shadow-sm space-y-3 mx-4">
         <div className="flex items-center justify-between border-b border-zinc-100 dark:border-zinc-800 pb-2">
           <div className="flex items-center gap-2">
             <Bot className="w-5 h-5 text-red-600" />
             <div>
               <h3 className="text-xs font-bold text-zinc-900 dark:text-zinc-100">Hello Nepal AI सहायक</h3>
-              <p className="text-[10px] text-zinc-400">100% वर्किंग और एक्टिव</p>
+              <p className="text-[10px] text-zinc-400">प्रॉक्सी सर्वर से कनेक्टेड</p>
             </div>
           </div>
           <a 
