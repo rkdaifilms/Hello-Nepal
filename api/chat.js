@@ -1,5 +1,4 @@
 export default async function handler(req, res) {
-  // 🛡️ CORS हेडर्स ताकि ब्राउज़र से रिक्वेस्ट ब्लॉक न हो
   res.setHeader('Access-Control-Allow-Credentials', true);
   res.setHeader('Access-Control-Allow-Origin', '*');
   res.setHeader('Access-Control-Allow-Methods', 'GET,OPTIONS,PATCH,DELETE,POST,PUT');
@@ -22,84 +21,58 @@ export default async function handler(req, res) {
     return res.status(400).json({ reply: 'भाई, कृपया कुछ लिखकर पूछें।' });
   }
 
-  // 🔑 तेरी तीनों असली API Keys यहाँ सुरक्षित हैं
-  const GEMINI_API_KEY = "AQ.Ab8RN6IhziSgyS5G0EQRP7-Qya_FPtGZyJsj1p6ud5nFFJ9SZg";
-  const OPENROUTER_API_KEY = "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";
-  const OPENAI_API_KEY = "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";
+  const OPENROUTER_KEY = "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";
+  const OPENAI_KEY = "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";
 
   let replyText = null;
 
-  // 1️⃣ सबसे पहले Gemini AI से कोशिश करते हैं
-  if (GEMINI_API_KEY && !replyText) {
-    try {
-      const geminiRes = await fetch(`https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-flash:generateContent?key=${GEMINI_API_KEY}`, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          contents: [{ parts: [{ text: message }] }]
-        })
-      });
-      const geminiData = await geminiRes.json();
-      if (geminiData.candidates && geminiData.candidates[0]?.content?.parts?.[0]?.text) {
-        replyText = geminiData.candidates[0].content.parts[0].text;
-      }
-    } catch (err) {
-      console.log("Gemini failed, moving to OpenRouter...");
+  // 1️⃣ OpenRouter से कोशिश
+  try {
+    const resOr = await fetch('https://openrouter.ai/api/v1/chat/completions', {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        'Authorization': `Bearer ${OPENROUTER_KEY}`
+      },
+      body: JSON.stringify({
+        model: 'openai/gpt-3.5-turbo',
+        messages: [{ role: 'user', content: message }]
+      })
+    });
+    const dataOr = await resOr.json();
+    if (dataOr.choices && dataOr.choices[0]?.message?.content) {
+      replyText = dataOr.choices[0].message.content;
     }
+  } catch (err) {
+    console.log("OpenRouter server error");
   }
 
-  // 2️⃣ अगर Gemini से जवाब न मिले, तो OpenRouter AI से कोशिश करते हैं
-  if (OPENROUTER_API_KEY && !replyText) {
+  // 2️⃣ OpenAI से कोशिश
+  if (!replyText) {
     try {
-      const orRes = await fetch('https://openrouter.ai/api/v1/chat/completions', {
+      const resOpenAI = await fetch('https://api.openai.com/v1/chat/completions', {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
-          'Authorization': `Bearer ${OPENROUTER_API_KEY}`,
-          'HTTP-Referer': 'https://hello-nepal.app',
-          'X-Title': 'Hello Nepal'
-        },
-        body: JSON.stringify({
-          model: 'openai/gpt-3.5-turbo',
-          messages: [{ role: 'user', content: message }]
-        })
-      });
-      const orData = await orRes.json();
-      if (orData.choices && orData.choices[0]?.message?.content) {
-        replyText = orData.choices[0].message.content;
-      }
-    } catch (err) {
-      console.log("OpenRouter failed, moving to OpenAI...");
-    }
-  }
-
-  // 3️⃣ आखिर में OpenAI से कोशिश करते हैं
-  if (OPENAI_API_KEY && !replyText) {
-    try {
-      const openaiRes = await fetch('https://api.openai.com/v1/chat/completions', {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-          'Authorization': `Bearer ${OPENAI_API_KEY}`
+          'Authorization': `Bearer ${OPENAI_KEY}`
         },
         body: JSON.stringify({
           model: 'gpt-3.5-turbo',
-          messages: [{ role: 'user', content: message }],
-          max_tokens: 300
+          messages: [{ role: 'user', content: message }]
         })
       });
-      const openaiData = await openaiRes.json();
-      if (openaiData.choices && openaiData.choices[0]?.message?.content) {
-        replyText = openaiData.choices[0].message.content;
+      const dataOpenAI = await resOpenAI.json();
+      if (dataOpenAI.choices && dataOpenAI.choices[0]?.message?.content) {
+        replyText = dataOpenAI.choices[0].message.content;
       }
     } catch (err) {
-      console.log("OpenAI also failed.");
+      console.log("OpenAI server error");
     }
   }
 
   if (replyText) {
     return res.status(200).json({ reply: replyText });
   } else {
-    return res.status(500).json({ reply: 'माफ़ करना भाई, तीनों एआई सर्वर में से अभी रिस्पॉन्स नहीं मिला। कृपया पुनः प्रयास करें।' });
+    return res.status(500).json({ reply: 'माफ़ करना भाई, एआई सर्वर से अभी रिस्पॉन्स नहीं मिला।' });
   }
 }
